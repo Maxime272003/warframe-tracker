@@ -30,6 +30,36 @@ function isTradeableWeapon(name: string) {
   return specificTradeable.includes(name);
 }
 
+function MouseGlow() {
+  const [position, setPosition] = useState({ x: -1000, y: -1000 });
+
+  useEffect(() => {
+    let animationFrameId: number;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        setPosition({ x: e.clientX, y: e.clientY });
+      });
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <div 
+      className="mouse-glow"
+      style={{
+        transform: `translate(${position.x}px, ${position.y}px)`
+      }}
+    />
+  );
+}
+
 export default function App() {
   const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
   const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('wf_theme') === 'light');
@@ -100,6 +130,7 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <MouseGlow />
       <header className="header">
         <h1 className="title">Warframe Arsenal</h1>
       </header>

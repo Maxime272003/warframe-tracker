@@ -47,15 +47,25 @@ body {
   background-color: var(--wf-bg-dark);
   color: var(--wf-text-primary);
   line-height: 1.5;
-  background-image: radial-gradient(ellipse at top center, #263352 0%, var(--wf-bg-dark) 80%);
+  background: linear-gradient(-45deg, #07090f, #141b2b, #263352, #18203c);
+  background-size: 400% 400%;
+  animation: gradientBG 20s ease infinite;
   background-attachment: fixed;
   background-position: center top;
   min-height: 100vh;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 body.light-mode {
-  background-image: radial-gradient(ellipse at top center, #e2e8f0 0%, var(--wf-bg-dark) 80%);
+  background: linear-gradient(-45deg, #ffffff, #f1f5f9, #cbd5e1, #e2e8f0);
+  background-size: 400% 400%;
+  animation: gradientBG 20s ease infinite;
 }
 
 a {
