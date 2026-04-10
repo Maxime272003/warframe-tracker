@@ -90,12 +90,6 @@ export default function App() {
     });
   };
 
-  const resetProgress = () => {
-    if (confirm("Voulez-vous vraiment réinitialiser toute votre progression ?")) {
-      setOwnedWeapons(new Set());
-    }
-  };
-
   const allWeapons = [
     ...(weaponsData.warframe_weapons.primary || []),
     ...(weaponsData.warframe_weapons.secondary || []),
@@ -190,25 +184,24 @@ export default function App() {
       )}
       <header className="header">
         <h1 className="title">Warframe Arsenal</h1>
-        <div className="top-actions">
-          <button className="export-btn" onClick={exportRemainingJson}>
-            Exporter Restants
-          </button>
-          
-          <button className="upload-btn" onClick={() => fileInputRef.current?.click()}>
-            Importer JSON
-          </button>
-          <input 
-            type="file" 
-            accept=".json" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            className="file-input"
-          />
-          
-          <button className="reset-button" onClick={resetProgress}>Réinitialiser</button>
-        </div>
       </header>
+
+      <div className="pre-sticky-actions">
+        <button className="export-btn" onClick={exportRemainingJson}>
+          Exporter Restants
+        </button>
+
+        <button className="upload-btn" onClick={() => fileInputRef.current?.click()}>
+          Importer JSON
+        </button>
+        <input 
+          type="file" 
+          accept=".json" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload} 
+          className="file-input"
+        />
+      </div>
 
       <div className="controls">
         <div className="top-nav">

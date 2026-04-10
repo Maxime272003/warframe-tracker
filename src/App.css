@@ -11,27 +11,21 @@
   padding-bottom: 1.5rem;
   position: relative;
   min-height: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
 }
 
-.top-actions {
-  position: absolute;
-  top: 0;
-  right: -1rem; /* Push it further out against the container padding */
+.pre-sticky-actions {
   display: flex;
+  justify-content: flex-start;
+  align-items: center;
   gap: 0.5rem;
-  padding: 0;
+  margin-bottom: 0.75rem;
+  padding-left: 0.2rem;
 }
 
 @media (max-width: 900px) {
-  .top-actions {
-    position: static;
-    margin-top: 1rem;
+  .pre-sticky-actions {
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
   }
 }
 
@@ -70,19 +64,29 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 2rem;
-  /* Differentiate from cards */
-  background: rgba(10, 12, 18, 0.95);
+  background: linear-gradient(135deg, rgba(12, 18, 27, 0.94) 0%, rgba(21, 28, 39, 0.9) 100%);
   padding: 1rem 1.5rem;
-  border-radius: 0 0 8px 8px; /* Slightly different rounded corners */
-  border: none;
-  border-bottom: 2px solid var(--wf-accent-gold);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(226, 192, 118, 0.45);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(226, 192, 118, 0.2);
+  position: relative;
 
   /* Sticky behavior */
   position: sticky;
-  top: 0;
+  top: 0.5rem;
   z-index: 50;
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+
+.controls::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1.5rem;
+  right: 1.5rem;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(226, 192, 118, 0.75) 50%, transparent 100%);
+  pointer-events: none;
 }
 
 .top-nav {
@@ -151,24 +155,6 @@
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--wf-accent-gold);
-}
-
-.reset-button {
-  background: transparent;
-  color: var(--wf-accent-gold);
-  border: 1px solid var(--wf-accent-gold);
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.reset-button:hover {
-  background: var(--wf-accent-gold);
-  color: var(--wf-bg-dark);
-  box-shadow: 0 0 15px var(--wf-accent-glow);
 }
 
 .category-section {
