@@ -3,6 +3,8 @@ import './App.css';
 import defaultWeaponsData from './weapons.json';
 import platIcon from './assets/PlatinumLarge.webp';
 import wikiIcon from './assets/Wiki.png';
+import voltSkin from './assets/VoltRaijinSkin.png';
+import revenantSkin from './assets/RevenantMephistoSkin.png';
 
 type WeaponsData = {
   warframe_weapons: {
@@ -156,6 +158,10 @@ export default function App() {
           onToggle={toggleWeapon}
         />
       </main>
+      
+      <img src={voltSkin} alt="Volt Raijin" className="decoration-skin left-skin" />
+      <img src={revenantSkin} alt="Revenant Mephisto" className="decoration-skin right-skin" />
+
       <ScrollToTopButton />
     </div>
   );
@@ -175,12 +181,8 @@ function CategorySection({
   onToggle: (w: string) => void
 }) {
   const [filter, setFilter] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-
   const filteredWeapons = useMemo(() => {
     let result = [...weapons];
-
-    if (searchQuery) result = result.filter(w => w.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
     else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
@@ -197,21 +199,12 @@ function CategorySection({
         <h3 className="category-title">
           {title} ({weapons.length - categoryOwnedCount} restantes)
         </h3>
-        <div className="category-filters">
-          <input 
-            type="text" 
-            className="search-input" 
-            placeholder="Rechercher une arme..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-          <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
-            <option value="All">Tous (A-Z)</option>
-            <option value="Kuva">Kuva</option>
-            <option value="Tenet">Tenet</option>
-            <option value="Coda">Coda</option>
-          </select>
-        </div>
+        <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
+          <option value="All">Tous (A-Z)</option>
+          <option value="Kuva">Kuva</option>
+          <option value="Tenet">Tenet</option>
+          <option value="Coda">Coda</option>
+        </select>
       </div>
 
       {filteredWeapons.length === 0 ? (
