@@ -1,0 +1,451 @@
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  border-bottom: 2px solid var(--wf-border);
+  padding-bottom: 1.5rem;
+  position: relative;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 2px;
+  background-color: var(--wf-accent-gold);
+  box-shadow: 0 0 10px var(--wf-accent-glow);
+}
+
+.title {
+  font-size: 3rem;
+  color: var(--wf-accent-gold);
+  text-shadow: 0 0 15px var(--wf-accent-glow);
+  margin-bottom: 0.5rem;
+  letter-spacing: 3px;
+}
+
+.subtitle {
+  color: var(--wf-text-secondary);
+  font-size: 1.2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: var(--wf-bg-card);
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--wf-border);
+  box-shadow: 0 4px 6px var(--wf-card-shadow);
+  backdrop-filter: blur(5px);
+}
+
+.top-nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  color: var(--wf-text-secondary);
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background: var(--wf-accent-gold);
+  color: #fff;
+  text-decoration: none;
+}
+
+.theme-toggle, .upload-btn {
+  background: transparent;
+  color: var(--wf-text-primary);
+  border: 1px solid var(--wf-border);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover, .upload-btn:hover {
+  border-color: var(--wf-accent-gold);
+  color: var(--wf-accent-gold);
+}
+
+.file-input {
+  display: none;
+}
+
+.summary-stats {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--wf-accent-gold);
+}
+
+.reset-button {
+  background: transparent;
+  color: var(--wf-accent-gold);
+  border: 1px solid var(--wf-accent-gold);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.reset-button:hover {
+  background: var(--wf-accent-gold);
+  color: var(--wf-bg-dark);
+  box-shadow: 0 0 15px var(--wf-accent-glow);
+}
+
+.category-section {
+  margin-bottom: 4rem;
+}
+
+.category-title {
+  font-size: 2rem;
+  color: var(--wf-text-primary);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.category-title::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: var(--wf-accent-gold);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px var(--wf-accent-glow);
+}
+
+.category-title::after {
+  content: '';
+  flex-grow: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--wf-border) 0%, transparent 100%);
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filter-select {
+  background: var(--wf-bg-card);
+  color: var(--wf-text-primary);
+  border: 1px solid var(--wf-border);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 4px;
+  outline: none;
+}
+
+.filter-select:focus {
+  border-color: var(--wf-accent-gold);
+}
+
+.weapons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Weapon Card */
+.weapon-card {
+  background-color: var(--wf-bg-card);
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px var(--wf-card-shadow);
+  backdrop-filter: blur(5px);
+}
+
+.weapon-card.acquired {
+  opacity: 0.6;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: var(--wf-success);
+}
+body.light-mode .weapon-card.acquired {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.weapon-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--wf-accent-gold);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.weapon-card.acquired::before {
+  background-color: var(--wf-success);
+  opacity: 1;
+}
+
+.weapon-card:hover {
+  border-color: var(--wf-accent-gold);
+  background-color: var(--wf-bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px var(--wf-card-shadow);
+}
+.weapon-card.acquired:hover {
+  border-color: var(--wf-success);
+  opacity: 0.9;
+}
+
+.weapon-card:hover::before {
+  opacity: 1;
+}
+
+.weapon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.weapon-name {
+  font-size: 1.4rem;
+  color: var(--wf-text-primary);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.weapon-image-container {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.weapon-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+}
+body.light-mode .weapon-image {
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+}
+
+.weapon-card.acquired .weapon-image {
+  filter: grayscale(100%) opacity(0.7);
+}
+
+/* Custom Checkbox */
+.checkbox-container {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  user-select: none;
+}
+
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 24px;
+  width: 24px;
+  background-color: transparent;
+  border: 2px solid var(--wf-text-muted);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-container:hover input ~ .checkmark {
+  border-color: var(--wf-accent-gold);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--wf-accent-gold);
+  border-color: var(--wf-accent-gold);
+  box-shadow: 0 0 10px var(--wf-accent-glow);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--wf-bg-dark);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Links area */
+.weapon-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+.link-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  flex: 1;
+  justify-content: center;
+  color: var(--wf-text-primary);
+}
+
+body.light-mode .link-item {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.link-item.market:hover {
+  background: rgba(226, 192, 118, 0.15);
+  text-decoration: none;
+}
+body.light-mode .link-item.market:hover {
+  background: rgba(195, 154, 62, 0.15);
+}
+
+.link-item.wiki:hover {
+  background: rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+}
+body.light-mode .link-item.wiki:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.link-item.disabled {
+  color: var(--wf-text-muted);
+  background: transparent;
+  border: 1px dashed var(--wf-border);
+  pointer-events: none;
+}
+
+.link-item.uncertain {
+  color: var(--wf-text-muted);
+  background: transparent;
+  border: 1px dashed var(--wf-border);
+  text-decoration: none;
+}
+.link-item.uncertain:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--wf-text-primary);
+  border-style: solid;
+}
+body.light-mode .link-item.uncertain:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--wf-text-muted);
+  font-style: italic;
+  padding: 2rem;
+  background: var(--wf-bg-card);
+  border-radius: 4px;
+  border: 1px dashed var(--wf-border);
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 2.2rem;
+  }
+  .weapons-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scroll to top button */
+.scroll-to-top {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 45px;
+  height: 45px;
+  background-color: var(--wf-bg-card);
+  color: var(--wf-accent-gold);
+  border: 1px solid var(--wf-border);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.scroll-to-top:hover {
+  background-color: var(--wf-bg-card-hover);
+  border-color: var(--wf-accent-gold);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px var(--wf-accent-glow);
+}
