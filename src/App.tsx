@@ -1,10 +1,14 @@
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import './App.css';
+import defaultWeaponsData from './weapons.json';
+import platIcon from './assets/PlatinumLarge.webp';
+import wikiIcon from './assets/Wiki.png';
 import voltSkin from './assets/VoltRaijinSkin.png';
 import revenantSkin from './assets/RevenantMephistoSkin.png';
-import { useCallback } from "react";
-import Particles from "@tsparticles/react";
+import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import type { Container, Engine } from "@tsparticles/engine";
-
+  
 type WeaponsData = {
   warframe_weapons: {
     melee: string[];
@@ -38,13 +42,17 @@ export default function App() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [particlesReady, setParticlesReady] = useState(false);
 
-  const particlesInit = useCallback(async (engine: Engine) => {
-    await loadSlim(engine);
+  // tsParticles v3: engine must be initialized once before rendering <Particles />
+  useEffect(() => {
+    initParticlesEngine(async (engine: Engine) => {
+      await loadSlim(engine);
+    }).then(() => setParticlesReady(true));
   }, []);
 
-  const particlesLoaded = useCallback(async (container: Container | undefined) => {
-    // console.log(container);
+  const particlesLoaded = useCallback(async (_container: Container | undefined) => {
+    // ready
   }, []);
 
   useEffect(() => {
@@ -113,72 +121,73 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        loaded={particlesLoaded}
-        options={{
-          fullScreen: { enable: true, zIndex: -1 },
-          background: {
-            color: { value: "transparent" },
-          },
-          fpsLimit: 60,
-          interactivity: {
-            events: {
-              onHover: {
-                enable: true,
-                mode: "grab",
-              },
+      {particlesReady && (
+        <Particles
+          id="tsparticles"
+          particlesLoaded={particlesLoaded}
+          options={{
+            fullScreen: { enable: true, zIndex: -1 },
+            background: {
+              color: { value: "transparent" },
             },
-            modes: {
-              grab: {
-                distance: 200,
-                links: {
-                  opacity: 0.5,
-                  color: "#e2c076"
+            fpsLimit: 60,
+            interactivity: {
+              events: {
+                onHover: {
+                  enable: true,
+                  mode: "grab",
+                },
+              },
+              modes: {
+                grab: {
+                  distance: 200,
+                  links: {
+                    opacity: 0.5,
+                    color: "#e2c076"
+                  },
                 },
               },
             },
-          },
-          particles: {
-            color: { value: "#e2c076" },
-            links: {
-              color: "#e2c076",
-              distance: 150,
-              enable: true,
-              opacity: 0.2,
-              width: 1,
-            },
-            move: {
-              direction: "none",
-              enable: true,
-              outModes: {
-                default: "bounce",
-              },
-              random: true,
-              speed: 1,
-              straight: false,
-            },
-            number: {
-              density: {
+            particles: {
+              color: { value: "#e2c076" },
+              links: {
+                color: "#e2c076",
+                distance: 150,
                 enable: true,
-                area: 800,
+                opacity: 0.2,
+                width: 1,
               },
-              value: 80,
+              move: {
+                direction: "none",
+                enable: true,
+                outModes: {
+                  default: "bounce",
+                },
+                random: true,
+                speed: 1,
+                straight: false,
+              },
+              number: {
+                density: {
+                  enable: true,
+                  width: 800,
+                },
+                value: 80,
+              },
+              opacity: {
+                value: 0.3,
+              },
+              shape: {
+                type: "circle",
+              },
+              size: {
+                value: { min: 1, max: 3 },
+              },
             },
-            opacity: {
-              value: 0.3,
-            },
-            shape: {
-              type: "circle",
-            },
-            size: {
-              value: { min: 1, max: 3 },
-            },
-          },
-          detectRetina: true,
-        }}
-      />
+            detectRetina: true,
+          }}
+        />
+      )}
       <header className="header">
         <h1 className="title">Warframe Arsenal</h1>
       </header>
