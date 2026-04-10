@@ -18,24 +18,6 @@
   --wf-card-shadow: rgba(0, 0, 0, 0.4);
 }
 
-body.light-mode {
-  /* Light Mode Variables */
-  --wf-bg-dark: #f0f2f5;
-  --wf-bg-card: rgba(255, 255, 255, 0.85);
-  --wf-bg-card-hover: rgba(255, 255, 255, 1);
-  
-  --wf-text-primary: #1e2230;
-  --wf-text-secondary: #4a505b;
-  --wf-text-muted: #8d95a1;
-  
-  --wf-accent-gold: #c39a3e; /* darker gold for readibility */
-  --wf-accent-gold-hover: #d2a440;
-  --wf-accent-glow: rgba(195, 154, 62, 0.3);
-  
-  --wf-border: #cbd5e1;
-  --wf-card-shadow: rgba(0, 0, 0, 0.1);
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -60,12 +42,6 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
-}
-
-body.light-mode {
-  background: linear-gradient(-45deg, #ffffff, #f1f5f9, #cbd5e1, #e2e8f0);
-  background-size: 400% 400%;
-  animation: gradientBG 20s ease infinite;
 }
 
 a {

@@ -81,19 +81,41 @@
   text-decoration: none;
 }
 
-.theme-toggle, .upload-btn {
-  background: transparent;
+.upload-btn, .export-btn {
+  background: var(--wf-bg-card);
   color: var(--wf-text-primary);
-  border: 1px solid var(--wf-border);
-  padding: 0.5rem 1rem;
-  font-weight: 600;
+  border: 1px solid var(--wf-accent-gold);
+  padding: 0.5rem 1.2rem;
   border-radius: 4px;
-  transition: all 0.2s;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
 }
 
-.theme-toggle:hover, .upload-btn:hover {
-  border-color: var(--wf-accent-gold);
-  color: var(--wf-accent-gold);
+.upload-btn:hover, .export-btn:hover {
+  background: var(--wf-accent-gold);
+  color: #000;
+  box-shadow: 0 0 15px var(--wf-accent-glow);
+}
+
+.export-btn {
+  border-color: var(--wf-success);
+}
+
+.export-btn:hover {
+  background: var(--wf-success);
+}
+
+.switch-container {
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid var(--wf-border);
+  transition: border-color 0.2s ease;
+}
+
+.switch-container:hover {
+  border-color: var(--wf-text-muted);
 }
 
 .file-input {
@@ -204,9 +226,7 @@
   background-color: rgba(0, 0, 0, 0.2);
   border-color: var(--wf-success);
 }
-body.light-mode .weapon-card.acquired {
-  background-color: rgba(255, 255, 255, 0.4);
-}
+
 
 .weapon-card::before {
   content: '';
@@ -268,9 +288,7 @@ body.light-mode .weapon-card.acquired {
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
 }
-body.light-mode .weapon-image {
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-}
+
 
 .weapon-card.acquired .weapon-image {
   filter: grayscale(100%) opacity(0.7);
@@ -358,25 +376,19 @@ body.light-mode .weapon-image {
   color: var(--wf-text-primary);
 }
 
-body.light-mode .link-item {
-  background: rgba(0, 0, 0, 0.05);
-}
+
 
 .link-item.market:hover {
   background: rgba(226, 192, 118, 0.15);
   text-decoration: none;
 }
-body.light-mode .link-item.market:hover {
-  background: rgba(195, 154, 62, 0.15);
-}
+
 
 .link-item.wiki:hover {
   background: rgba(255, 255, 255, 0.15);
   text-decoration: none;
 }
-body.light-mode .link-item.wiki:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
+
 
 .link-item.disabled {
   color: var(--wf-text-muted);
@@ -396,9 +408,7 @@ body.light-mode .link-item.wiki:hover {
   color: var(--wf-text-primary);
   border-style: solid;
 }
-body.light-mode .link-item.uncertain:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
+
 
 .icon {
   width: 16px;
@@ -470,9 +480,7 @@ body.light-mode .link-item.uncertain:hover {
   mask-image: linear-gradient(to top, transparent 0%, black 15%, black 100%);
 }
 
-body.light-mode .decoration-skin {
-  opacity: 0.6;
-}
+
 
 .decoration-skin.left-skin {
   left: -20px;
@@ -494,21 +502,4 @@ body.light-mode .decoration-skin {
   }
 }
 
-/* Mouse Glow Aura */
-.mouse-glow {
-  position: fixed;
-  top: -200px;
-  left: -200px;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1; 
-  background: radial-gradient(circle, rgba(226, 192, 118, 0.15) 0%, transparent 60%);
-  filter: blur(40px);
-  will-change: transform;
-}
 
-body.light-mode .mouse-glow {
-  background: radial-gradient(circle, rgba(160, 200, 255, 0.3) 0%, transparent 60%);
-}

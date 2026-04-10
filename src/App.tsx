@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import './App.css';
-import defaultWeaponsData from './weapons.json';
-import platIcon from './assets/PlatinumLarge.webp';
-import wikiIcon from './assets/Wiki.png';
 import voltSkin from './assets/VoltRaijinSkin.png';
 import revenantSkin from './assets/RevenantMephistoSkin.png';
+import { useCallback } from "react";
+import Particles from "@tsparticles/react";
+import { loadSlim } from "@tsparticles/slim";
+import type { Container, Engine } from "@tsparticles/engine";
 
 type WeaponsData = {
   warframe_weapons: {
@@ -19,7 +18,6 @@ function isTradeableWeapon(name: string) {
   const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Prisma ', 'Vandal', 'Wraith', 'Prime', 'Rakta ', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
   if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
 
-  // Specific weapons that drop as tradeable parts
   const specificTradeable = [
     'Aeolak', 'Arum Spinosa', 'Cinta', 'Cortege', 'Cyngas', 'Mandonel', 'Morgha', 'Phaedra', 
     'Sporothrix', 'Agkuza', 'Kaszas', 'Onorix', 'Rathbone', 'Quassus', 'Gotva Prime', 'Hespar',
@@ -30,39 +28,9 @@ function isTradeableWeapon(name: string) {
   return specificTradeable.includes(name);
 }
 
-function MouseGlow() {
-  const [position, setPosition] = useState({ x: -1000, y: -1000 });
-
-  useEffect(() => {
-    let animationFrameId: number;
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(() => {
-        setPosition({ x: e.clientX, y: e.clientY });
-      });
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return (
-    <div 
-      className="mouse-glow"
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`
-      }}
-    />
-  );
-}
-
 export default function App() {
   const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
-  const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('wf_theme') === 'light');
+  const [hideOwned, setHideOwned] = useState(false);
   
   const [ownedWeapons, setOwnedWeapons] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('wf_owned_weapons');
@@ -71,15 +39,13 @@ export default function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isLightMode) {
-      document.body.classList.add('light-mode');
-      localStorage.setItem('wf_theme', 'light');
-    } else {
-      document.body.classList.remove('light-mode');
-      localStorage.setItem('wf_theme', 'dark');
-    }
-  }, [isLightMode]);
+  const particlesInit = useCallback(async (engine: Engine) => {
+    await loadSlim(engine);
+  }, []);
+
+  const particlesLoaded = useCallback(async (container: Container | undefined) => {
+    // console.log(container);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('wf_owned_weapons', JSON.stringify(Array.from(ownedWeapons)));
@@ -128,9 +94,91 @@ export default function App() {
     ...(weaponsData.warframe_weapons.melee || [])
   ];
 
+  const exportRemainingJson = () => {
+    const remaining = {
+      warframe_weapons: {
+        primary: (weaponsData.warframe_weapons.primary || []).filter(w => !ownedWeapons.has(w)),
+        secondary: (weaponsData.warframe_weapons.secondary || []).filter(w => !ownedWeapons.has(w)),
+        melee: (weaponsData.warframe_weapons.melee || []).filter(w => !ownedWeapons.has(w))
+      }
+    };
+    const blob = new Blob([JSON.stringify(remaining, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'remaining_weapons.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="app-container">
-      <MouseGlow />
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        loaded={particlesLoaded}
+        options={{
+          fullScreen: { enable: true, zIndex: -1 },
+          background: {
+            color: { value: "transparent" },
+          },
+          fpsLimit: 60,
+          interactivity: {
+            events: {
+              onHover: {
+                enable: true,
+                mode: "grab",
+              },
+            },
+            modes: {
+              grab: {
+                distance: 200,
+                links: {
+                  opacity: 0.5,
+                  color: "#e2c076"
+                },
+              },
+            },
+          },
+          particles: {
+            color: { value: "#e2c076" },
+            links: {
+              color: "#e2c076",
+              distance: 150,
+              enable: true,
+              opacity: 0.2,
+              width: 1,
+            },
+            move: {
+              direction: "none",
+              enable: true,
+              outModes: {
+                default: "bounce",
+              },
+              random: true,
+              speed: 1,
+              straight: false,
+            },
+            number: {
+              density: {
+                enable: true,
+                area: 800,
+              },
+              value: 80,
+            },
+            opacity: {
+              value: 0.3,
+            },
+            shape: {
+              type: "circle",
+            },
+            size: {
+              value: { min: 1, max: 3 },
+            },
+          },
+          detectRetina: true,
+        }}
+      />
       <header className="header">
         <h1 className="title">Warframe Arsenal</h1>
       </header>
@@ -146,9 +194,19 @@ export default function App() {
           {allWeapons.length - ownedWeapons.size} arme(s) restante(s) à farm
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="theme-toggle" onClick={() => setIsLightMode(!isLightMode)}>
-            {isLightMode ? "Mode Sombre" : "Mode Clair"}
+        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <label className="switch-container" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--wf-text-secondary)', marginRight: '0.5rem' }}>Masquer acquises</span>
+            <input 
+              type="checkbox" 
+              checked={hideOwned} 
+              onChange={() => setHideOwned(!hideOwned)}
+              style={{ cursor: 'pointer' }}
+            />
+          </label>
+
+          <button className="export-btn" onClick={exportRemainingJson}>
+            Exporter Restants
           </button>
           
           <button className="upload-btn" onClick={() => fileInputRef.current?.click()}>
@@ -173,6 +231,7 @@ export default function App() {
           weapons={weaponsData.warframe_weapons.primary || []} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
+          hideOwned={hideOwned}
         />
         <CategorySection 
           id="secondary"
@@ -180,6 +239,7 @@ export default function App() {
           weapons={weaponsData.warframe_weapons.secondary || []} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
+          hideOwned={hideOwned}
         />
         <CategorySection 
           id="melee"
@@ -187,6 +247,7 @@ export default function App() {
           weapons={weaponsData.warframe_weapons.melee || []} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
+          hideOwned={hideOwned}
         />
       </main>
       
@@ -203,18 +264,21 @@ function CategorySection({
   title, 
   weapons, 
   owned, 
-  onToggle
+  onToggle,
+  hideOwned
 }: { 
   id: string,
   title: string, 
   weapons: string[], 
   owned: Set<string>, 
-  onToggle: (w: string) => void
+  onToggle: (w: string) => void,
+  hideOwned: boolean
 }) {
   const [filter, setFilter] = useState('All');
   const filteredWeapons = useMemo(() => {
     let result = [...weapons];
 
+    if (hideOwned) result = result.filter(w => !owned.has(w));
     if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
     else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
     else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
