@@ -14,7 +14,7 @@ type WeaponsData = {
 };
 
 function isTradeableWeapon(name: string) {
-  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Coda ', 'Prisma ', 'Vandal', 'Wraith', 'Prime', 'Rakta ', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
+  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Prisma ', 'Vandal', 'Wraith', 'Prime', 'Rakta ', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
   if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
 
   // Specific weapons that drop as tradeable parts
