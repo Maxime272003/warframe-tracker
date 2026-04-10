@@ -190,6 +190,24 @@ export default function App() {
       )}
       <header className="header">
         <h1 className="title">Warframe Arsenal</h1>
+        <div className="top-actions">
+          <button className="export-btn" onClick={exportRemainingJson}>
+            Exporter Restants
+          </button>
+          
+          <button className="upload-btn" onClick={() => fileInputRef.current?.click()}>
+            Importer JSON
+          </button>
+          <input 
+            type="file" 
+            accept=".json" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            className="file-input"
+          />
+          
+          <button className="reset-button" onClick={resetProgress}>Réinitialiser</button>
+        </div>
       </header>
 
       <div className="controls">
@@ -213,23 +231,6 @@ export default function App() {
               style={{ cursor: 'pointer' }}
             />
           </label>
-
-          <button className="export-btn" onClick={exportRemainingJson}>
-            Exporter Restants
-          </button>
-          
-          <button className="upload-btn" onClick={() => fileInputRef.current?.click()}>
-            Importer JSON
-          </button>
-          <input 
-            type="file" 
-            accept=".json" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            className="file-input"
-          />
-          
-          <button className="reset-button" onClick={resetProgress}>Réinitialiser</button>
         </div>
       </div>
 
@@ -293,7 +294,7 @@ function CategorySection({
     else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
 
     return result.sort((a,b) => a.localeCompare(b));
-  }, [weapons, filter]);
+  }, [weapons, filter, hideOwned, owned]);
 
   const categoryOwnedCount = weapons.filter(w => owned.has(w)).length;
 
