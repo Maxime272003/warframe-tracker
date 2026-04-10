@@ -110,7 +110,7 @@ export default function App() {
         </div>
         
         <div className="summary-stats">
-          {ownedWeapons.size} / {allWeapons.length} arme(s) acquise(s)
+          {allWeapons.length - ownedWeapons.size} arme(s) restante(s) à farm
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -175,11 +175,14 @@ function CategorySection({
   onToggle: (w: string) => void
 }) {
   const [filter, setFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredWeapons = useMemo(() => {
     let result = [...weapons];
 
-    if (filter === 'Kuva') result = result.filter(w => w.startsWith('Kuva '));
+    if (searchQuery) result = result.filter(w => w.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
     else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
     else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
 
@@ -192,14 +195,23 @@ function CategorySection({
     <section id={id} className="category-section">
       <div className="category-header">
         <h3 className="category-title">
-          {title} ({categoryOwnedCount}/{weapons.length})
+          {title} ({weapons.length - categoryOwnedCount} restantes)
         </h3>
-        <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
-          <option value="All">Tous (A-Z)</option>
-          <option value="Kuva">Kuva</option>
-          <option value="Tenet">Tenet</option>
-          <option value="Coda">Coda</option>
-        </select>
+        <div className="category-filters">
+          <input 
+            type="text" 
+            className="search-input" 
+            placeholder="Rechercher une arme..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
+            <option value="All">Tous (A-Z)</option>
+            <option value="Kuva">Kuva</option>
+            <option value="Tenet">Tenet</option>
+            <option value="Coda">Coda</option>
+          </select>
+        </div>
       </div>
 
       {filteredWeapons.length === 0 ? (
