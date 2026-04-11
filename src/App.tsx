@@ -36,6 +36,8 @@ export default function App() {
   const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
   const [hideOwned, setHideOwned] = useState(false);
   
+  const [filter, setFilter] = useState('All');
+  
   const [ownedWeapons, setOwnedWeapons] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('wf_owned_weapons');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -90,11 +92,28 @@ export default function App() {
     });
   };
 
-  const allWeapons = [
-    ...(weaponsData.warframe_weapons.primary || []),
-    ...(weaponsData.warframe_weapons.secondary || []),
-    ...(weaponsData.warframe_weapons.melee || [])
-  ];
+  const applyFilter = useCallback((weapons: string[]) => {
+    let result = [...weapons];
+    if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
+    else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
+    else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
+    else if (filter === 'Standard') result = result.filter(w => !w.includes('Kuva ') && !w.startsWith('Tenet ') && !w.startsWith('Coda '));
+    return result;
+  }, [filter]);
+
+  const primaryFiltered = useMemo(() => applyFilter(weaponsData.warframe_weapons.primary || []), [weaponsData.warframe_weapons.primary, applyFilter]);
+  const secondaryFiltered = useMemo(() => applyFilter(weaponsData.warframe_weapons.secondary || []), [weaponsData.warframe_weapons.secondary, applyFilter]);
+  const meleeFiltered = useMemo(() => applyFilter(weaponsData.warframe_weapons.melee || []), [weaponsData.warframe_weapons.melee, applyFilter]);
+
+  const allFilteredWeapons = useMemo(() => [
+    ...primaryFiltered,
+    ...secondaryFiltered,
+    ...meleeFiltered
+  ], [primaryFiltered, secondaryFiltered, meleeFiltered]);
+
+  const remainingToFarm = useMemo(() => 
+    allFilteredWeapons.filter(w => !ownedWeapons.has(w)).length
+  , [allFilteredWeapons, ownedWeapons]);
 
   const exportRemainingJson = () => {
     const remaining = {
@@ -211,10 +230,18 @@ export default function App() {
         </div>
         
         <div className="summary-stats">
-          {allWeapons.length - ownedWeapons.size} arme(s) restante(s) à farm
+          {remainingToFarm} arme(s) {filter !== 'All' ? `(${filter.toLowerCase()}) ` : ''}restante(s) à farm
         </div>
 
         <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
+            <option value="All">Toutes (A-Z)</option>
+            <option value="Standard">Normales (Non-Kuva/Tenet/Coda)</option>
+            <option value="Kuva">Kuva</option>
+            <option value="Tenet">Tenet</option>
+            <option value="Coda">Coda</option>
+          </select>
+
           <label className="switch-container" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
             <span style={{ fontSize: '0.9rem', color: 'var(--wf-text-secondary)', marginRight: '0.5rem' }}>Masquer acquises</span>
             <input 
@@ -231,7 +258,7 @@ export default function App() {
         <CategorySection 
           id="primary"
           title="Armes Principales" 
-          weapons={weaponsData.warframe_weapons.primary || []} 
+          weapons={primaryFiltered} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
@@ -239,7 +266,7 @@ export default function App() {
         <CategorySection 
           id="secondary"
           title="Armes Secondaires" 
-          weapons={weaponsData.warframe_weapons.secondary || []} 
+          weapons={secondaryFiltered} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
@@ -247,7 +274,7 @@ export default function App() {
         <CategorySection 
           id="melee"
           title="Armes de Mêlée" 
-          weapons={weaponsData.warframe_weapons.melee || []} 
+          weapons={meleeFiltered} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
@@ -277,32 +304,20 @@ function CategorySection({
   onToggle: (w: string) => void,
   hideOwned: boolean
 }) {
-  const [filter, setFilter] = useState('All');
   const filteredWeapons = useMemo(() => {
     let result = [...weapons];
-
     if (hideOwned) result = result.filter(w => !owned.has(w));
-    if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
-    else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
-    else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
-
     return result.sort((a,b) => a.localeCompare(b));
-  }, [weapons, filter, hideOwned, owned]);
+  }, [weapons, hideOwned, owned]);
 
-  const categoryOwnedCount = weapons.filter(w => owned.has(w)).length;
+  const categoryRemainingCount = weapons.filter(w => !owned.has(w)).length;
 
   return (
     <section id={id} className="category-section">
       <div className="category-header">
         <h3 className="category-title">
-          {title} ({weapons.length - categoryOwnedCount} restantes)
+          {title} ({categoryRemainingCount} restantes)
         </h3>
-        <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
-          <option value="All">Tous (A-Z)</option>
-          <option value="Kuva">Kuva</option>
-          <option value="Tenet">Tenet</option>
-          <option value="Coda">Coda</option>
-        </select>
       </div>
 
       {filteredWeapons.length === 0 ? (
