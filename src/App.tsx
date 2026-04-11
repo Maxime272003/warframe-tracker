@@ -59,6 +59,11 @@ export default function App() {
     }).then(() => setParticlesReady(true));
   }, []);
 
+  useEffect(() => {
+    // Force scroll to top on mount to avoid being "teleported" to the bottom
+    window.scrollTo(0, 0);
+  }, []);
+
   const particlesLoaded = useCallback(async (_container: Container | undefined) => {
     // ready
   }, []);
