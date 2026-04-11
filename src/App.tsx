@@ -116,11 +116,21 @@ export default function App() {
   const toggleWeapon = (weapon: string) => {
     setOwnedWeapons(prev => {
       const next = new Set(prev);
-      if (next.has(weapon)) next.delete(weapon);
-      else next.add(weapon);
+      if (next.has(weapon)) {
+        next.delete(weapon);
+      } else {
+        next.add(weapon);
+        // Automatiquement enlever de la priorité si l'arme est acquise
+        setPriorityWeapons(prevPriority => {
+          const nextPriority = new Set(prevPriority);
+          nextPriority.delete(weapon);
+          return nextPriority;
+        });
+      }
       return next;
     });
   };
+
 
   const togglePriority = (weapon: string) => {
     setPriorityWeapons(prev => {
@@ -319,7 +329,7 @@ export default function App() {
         <CategorySection 
           id="primary"
           title="Armes Principales" 
-          weapons={primaryFiltered} 
+          weapons={primaryFiltered.filter(w => !priorityWeapons.has(w))} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
@@ -329,7 +339,7 @@ export default function App() {
         <CategorySection 
           id="secondary"
           title="Armes Secondaires" 
-          weapons={secondaryFiltered} 
+          weapons={secondaryFiltered.filter(w => !priorityWeapons.has(w))} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
@@ -339,13 +349,14 @@ export default function App() {
         <CategorySection 
           id="melee"
           title="Armes de Mêlée" 
-          weapons={meleeFiltered} 
+          weapons={meleeFiltered.filter(w => !priorityWeapons.has(w))} 
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
         />
+
       </main>
 
       
