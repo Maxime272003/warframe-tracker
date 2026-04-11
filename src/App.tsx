@@ -19,7 +19,7 @@ type WeaponsData = {
 };
 
 function isTradeableWeapon(name: string) {
-  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Prisma ', 'Vandal', 'Wraith', 'Prime', 'Rakta ', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
+  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Wraith', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
   if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
 
   const specificTradeable = [
