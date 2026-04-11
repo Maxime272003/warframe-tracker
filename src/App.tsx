@@ -19,14 +19,14 @@ type WeaponsData = {
 };
 
 function isTradeableWeapon(name: string) {
-  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Wraith', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
+  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
   if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
 
   const specificTradeable = [
     'Aeolak', 'Arum Spinosa', 'Cinta', 'Cortege', 'Cyngas', 'Mandonel', 'Morgha', 'Phaedra', 
     'Sporothrix', 'Agkuza', 'Kaszas', 'Onorix', 'Rathbone', 'Gotva Prime', 'Hespar',
     'Pennant', 'Korumm', 'Nepheri', 'Athodai', 'Shedu', 'Carmine Penta', 'Centaur', 'Corvas',
-    'Dual Decurion', 'Fluctus', 'Knux', 'Velocitus', 'Larkspur'
+    'Dual Decurion', 'Fluctus', 'Knux', 'Velocitus', 'Larkspur', 'Rauta'
   ];
   
   return specificTradeable.includes(name);
