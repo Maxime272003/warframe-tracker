@@ -24,7 +24,7 @@ function isTradeableWeapon(name: string) {
 
   const specificTradeable = [
     'Aeolak', 'Arum Spinosa', 'Cinta', 'Cortege', 'Cyngas', 'Mandonel', 'Morgha', 'Phaedra', 
-    'Sporothrix', 'Agkuza', 'Kaszas', 'Onorix', 'Rathbone', 'Quassus', 'Gotva Prime', 'Hespar',
+    'Sporothrix', 'Agkuza', 'Kaszas', 'Onorix', 'Rathbone', 'Gotva Prime', 'Hespar',
     'Pennant', 'Korumm', 'Nepheri', 'Athodai', 'Shedu', 'Carmine Penta', 'Centaur', 'Corvas',
     'Dual Decurion', 'Fluctus', 'Knux', 'Velocitus', 'Larkspur'
   ];
