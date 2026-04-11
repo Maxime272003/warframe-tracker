@@ -49,6 +49,12 @@ export default function App() {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
+  const [priorityWeapons, setPriorityWeapons] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('wf_priority_weapons');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [particlesReady, setParticlesReady] = useState(false);
 
@@ -71,6 +77,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('wf_owned_weapons', JSON.stringify(Array.from(ownedWeapons)));
   }, [ownedWeapons]);
+
+  useEffect(() => {
+    localStorage.setItem('wf_priority_weapons', JSON.stringify(Array.from(priorityWeapons)));
+  }, [priorityWeapons]);
+
 
   useEffect(() => {
     localStorage.setItem('wf_weapon_filter', filter);
@@ -111,6 +122,16 @@ export default function App() {
     });
   };
 
+  const togglePriority = (weapon: string) => {
+    setPriorityWeapons(prev => {
+      const next = new Set(prev);
+      if (next.has(weapon)) next.delete(weapon);
+      else next.add(weapon);
+      return next;
+    });
+  };
+
+
   const applyFilter = useCallback((weapons: string[]) => {
     let result = [...weapons];
     if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
@@ -130,9 +151,18 @@ export default function App() {
     ...meleeFiltered
   ], [primaryFiltered, secondaryFiltered, meleeFiltered]);
 
+  const priorityFiltered = useMemo(() => {
+    // Priority filter only shows weapons that are in priorityWeapons AND currently visible via filters
+    let result = allFilteredWeapons.filter(w => priorityWeapons.has(w));
+    if (hideOwned) result = result.filter(w => !ownedWeapons.has(w));
+    return result;
+  }, [allFilteredWeapons, priorityWeapons, hideOwned, ownedWeapons]);
+
+
   const remainingToFarm = useMemo(() => 
     allFilteredWeapons.filter(w => !ownedWeapons.has(w)).length
   , [allFilteredWeapons, ownedWeapons]);
+
 
   const exportRemainingJson = () => {
     const remaining = {
@@ -274,6 +304,18 @@ export default function App() {
       </div>
 
       <main>
+        {priorityFiltered.length > 0 && (
+          <CategorySection 
+            id="priority"
+            title="Priorités" 
+            weapons={priorityFiltered} 
+            owned={ownedWeapons}
+            onToggle={toggleWeapon}
+            hideOwned={hideOwned}
+            priority={priorityWeapons}
+            onTogglePriority={togglePriority}
+          />
+        )}
         <CategorySection 
           id="primary"
           title="Armes Principales" 
@@ -281,6 +323,8 @@ export default function App() {
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
+          priority={priorityWeapons}
+          onTogglePriority={togglePriority}
         />
         <CategorySection 
           id="secondary"
@@ -289,6 +333,8 @@ export default function App() {
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
+          priority={priorityWeapons}
+          onTogglePriority={togglePriority}
         />
         <CategorySection 
           id="melee"
@@ -297,8 +343,11 @@ export default function App() {
           owned={ownedWeapons}
           onToggle={toggleWeapon}
           hideOwned={hideOwned}
+          priority={priorityWeapons}
+          onTogglePriority={togglePriority}
         />
       </main>
+
       
       <img src={voltSkin} alt="Volt Raijin" className="decoration-skin left-skin" />
       <img src={revenantSkin} alt="Revenant Mephisto" className="decoration-skin right-skin" />
@@ -314,15 +363,20 @@ function CategorySection({
   weapons, 
   owned, 
   onToggle,
-  hideOwned
+  hideOwned,
+  priority,
+  onTogglePriority
 }: { 
   id: string,
   title: string, 
   weapons: string[], 
   owned: Set<string>, 
   onToggle: (w: string) => void,
-  hideOwned: boolean
+  hideOwned: boolean,
+  priority: Set<string>,
+  onTogglePriority: (w: string) => void
 }) {
+
   const filteredWeapons = useMemo(() => {
     let result = [...weapons];
     if (hideOwned) result = result.filter(w => !owned.has(w));
@@ -349,7 +403,10 @@ function CategorySection({
               weapon={weapon} 
               isOwned={owned.has(weapon)}
               onToggle={() => onToggle(weapon)}
+              isPriority={priority.has(weapon)}
+              onTogglePriority={() => onTogglePriority(weapon)}
             />
+
           ))}
         </div>
       )}
@@ -360,12 +417,17 @@ function CategorySection({
 function WeaponCard({ 
   weapon, 
   isOwned,
-  onToggle
+  onToggle,
+  isPriority,
+  onTogglePriority
 }: { 
   weapon: string, 
   isOwned: boolean,
-  onToggle: () => void
+  onToggle: () => void,
+  isPriority: boolean,
+  onTogglePriority: () => void
 }) {
+
   const formattedNameMarket = weapon.toLowerCase().replace(/ /g, '_');
   const formattedNameWiki = weapon.replace(/ /g, '_');
 
@@ -395,11 +457,21 @@ function WeaponCard({
     <div className={`weapon-card ${isOwned ? 'acquired' : ''}`}>
       <div className="weapon-header">
         <span className="weapon-name">{weapon}</span>
-        <label className="checkbox-container">
-          <input type="checkbox" onChange={onToggle} checked={isOwned} />
-          <span className="checkmark"></span>
-        </label>
+        <div className="weapon-actions">
+          <button 
+            className={`priority-btn ${isPriority ? 'active' : ''}`} 
+            onClick={onTogglePriority}
+            title={isPriority ? "Retirer des priorités" : "Ajouter aux priorités"}
+          >
+            ★
+          </button>
+          <label className="checkbox-container">
+            <input type="checkbox" onChange={onToggle} checked={isOwned} />
+            <span className="checkmark"></span>
+          </label>
+        </div>
       </div>
+
 
       <div className="weapon-image-container">
         {imageUrl ? (
