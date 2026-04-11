@@ -19,7 +19,7 @@ type WeaponsData = {
 };
 
 function isTradeableWeapon(name: string) {
-  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor '];
+  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor ', 'Prisma ', ' Wraith'];
   if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
 
   const specificTradeable = [
@@ -454,10 +454,14 @@ function WeaponCard({
     marketUrl = `https://warframe.market/auctions/search?type=sister&weapon_url_name=${formattedNameMarket}`;
     isSpecial = true;
   } else {
-    marketUrl = `https://warframe.market/items/${formattedNameMarket}_set`;
+    const noSetVariants = ['Prisma', 'Wraith', 'Sancti', 'Secura', 'Telos', 'Vaykor', 'Synoid', 'Mara'];
+    const needsSet = !noSetVariants.some(v => weapon.includes(v));
+    marketUrl = `https://warframe.market/items/${formattedNameMarket}${needsSet ? '_set' : ''}`;
   }
 
   const fullMarketUrl = isSpecial ? marketUrl : `${marketUrl}?type=sell`;
+
+
 
   const isTradeable = isTradeableWeapon(weapon);
 
