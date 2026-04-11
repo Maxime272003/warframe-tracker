@@ -34,9 +34,15 @@ function isTradeableWeapon(name: string) {
 
 export default function App() {
   const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
-  const [hideOwned, setHideOwned] = useState(false);
+  const [hideOwned, setHideOwned] = useState(() => {
+    const saved = localStorage.getItem('wf_hide_owned');
+    return saved === 'true';
+  });
   
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState(() => {
+    const saved = localStorage.getItem('wf_weapon_filter');
+    return saved || 'All';
+  });
   
   const [ownedWeapons, setOwnedWeapons] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('wf_owned_weapons');
@@ -60,6 +66,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('wf_owned_weapons', JSON.stringify(Array.from(ownedWeapons)));
   }, [ownedWeapons]);
+
+  useEffect(() => {
+    localStorage.setItem('wf_weapon_filter', filter);
+  }, [filter]);
+
+  useEffect(() => {
+    localStorage.setItem('wf_hide_owned', String(hideOwned));
+  }, [hideOwned]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
