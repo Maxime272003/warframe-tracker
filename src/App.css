@@ -136,6 +136,9 @@
 }
 
 .switch-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.4rem 0.8rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 20px;
@@ -145,6 +148,18 @@
 
 .switch-container:hover {
   border-color: var(--wf-text-muted);
+}
+
+.switch-label {
+  font-size: 0.9rem;
+  color: var(--wf-text-secondary);
+}
+
+.controls-inline {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .file-input {
