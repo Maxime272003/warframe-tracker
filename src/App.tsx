@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import './App.css';
-import defaultWeaponsData from './weapons.json';
 import platIcon from './assets/PlatinumLarge.webp';
 import wikiIcon from './assets/Wiki.png';
 import voltSkin from './assets/VoltRaijinSkin.png';
@@ -18,6 +17,27 @@ type WeaponsData = {
     [key: string]: string[] | undefined;
   }
 };
+
+const EMPTY_WEAPONS_DATA: WeaponsData = {
+  warframe_weapons: {
+    primary: [],
+    secondary: [],
+    melee: [],
+  },
+};
+
+function isWeaponsData(value: unknown): value is WeaponsData {
+  const data = value as WeaponsData;
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof data.warframe_weapons === 'object' &&
+    data.warframe_weapons !== null &&
+    Array.isArray(data.warframe_weapons.primary) &&
+    Array.isArray(data.warframe_weapons.secondary) &&
+    Array.isArray(data.warframe_weapons.melee)
+  );
+}
 
 function normalizeWeaponNameForMarket(name: string) {
   return name.toLowerCase().trim().replace(/\s+/g, '_');
@@ -71,7 +91,16 @@ function parseMarketSlugsText(text: string): string[] {
 }
 
 export default function App() {
-  const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
+  const [weaponsData, setWeaponsData] = useState<WeaponsData>(() => {
+    try {
+      const saved = localStorage.getItem('wf_weapons_data');
+      if (!saved) return EMPTY_WEAPONS_DATA;
+      const parsed = JSON.parse(saved);
+      return isWeaponsData(parsed) ? parsed : EMPTY_WEAPONS_DATA;
+    } catch {
+      return EMPTY_WEAPONS_DATA;
+    }
+  });
   const [hideOwned, setHideOwned] = useState(() => {
     const saved = localStorage.getItem('wf_hide_owned');
     return saved === 'true';
@@ -169,6 +198,10 @@ export default function App() {
   }, [ownedWeapons]);
 
   useEffect(() => {
+    localStorage.setItem('wf_weapons_data', JSON.stringify(weaponsData));
+  }, [weaponsData]);
+
+  useEffect(() => {
     localStorage.setItem('wf_priority_weapons', JSON.stringify(Array.from(priorityWeapons)));
   }, [priorityWeapons]);
 
@@ -180,6 +213,35 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('wf_hide_owned', String(hideOwned));
   }, [hideOwned]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadWeaponsFromPublicFile = async () => {
+      if (weaponsData.warframe_weapons.primary.length > 0
+        || weaponsData.warframe_weapons.secondary.length > 0
+        || weaponsData.warframe_weapons.melee.length > 0) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/weapons.json', { signal: controller.signal, cache: 'no-store' });
+        if (!response.ok) return;
+        const text = await response.text();
+        if (!text.trim()) return;
+        const parsed = JSON.parse(text);
+        if (isWeaponsData(parsed)) {
+          setWeaponsData(parsed);
+        }
+      } catch {
+        // optional file: keep app functional with empty list
+      }
+    };
+
+    void loadWeaponsFromPublicFile();
+
+    return () => controller.abort();
+  }, [weaponsData.warframe_weapons.primary.length, weaponsData.warframe_weapons.secondary.length, weaponsData.warframe_weapons.melee.length]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
