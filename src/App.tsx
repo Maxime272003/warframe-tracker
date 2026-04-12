@@ -8,6 +8,7 @@ import revenantSkin from './assets/RevenantMephistoSkin.png';
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import type { Engine } from "@tsparticles/engine";
+import localMarketSlugsText from '../api_doc/warframe_market_slugs.txt?raw';
   
 type WeaponsData = {
   warframe_weapons: {
@@ -62,6 +63,13 @@ function extractMarketItemUrlNames(payload: unknown): string[] {
     .map((slug) => slug.toLowerCase());
 }
 
+function parseMarketSlugsText(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export default function App() {
   const [weaponsData, setWeaponsData] = useState<WeaponsData>(defaultWeaponsData as WeaponsData);
   const [hideOwned, setHideOwned] = useState(() => {
@@ -84,6 +92,7 @@ export default function App() {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const [marketSlugs, setMarketSlugs] = useState<Set<string>>(() => {
+    const bundledSlugs = parseMarketSlugsText(localMarketSlugsText);
     const CACHE_KEY = 'wf_market_slugs_cache_v1';
     const CACHE_TS_KEY = 'wf_market_slugs_cache_ts_v1';
     const CACHE_TTL_MS = 1000 * 60 * 60 * 12; // 12h
@@ -95,14 +104,14 @@ export default function App() {
       if (isFresh) {
         const parsed = JSON.parse(cached) as string[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return new Set(parsed);
+          return new Set([...bundledSlugs, ...parsed]);
         }
       }
     } catch {
       // ignore cache read errors
     }
 
-    return new Set();
+    return new Set(bundledSlugs);
   });
 
 
