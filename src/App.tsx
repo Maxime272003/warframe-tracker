@@ -7,7 +7,7 @@ import voltSkin from './assets/VoltRaijinSkin.png';
 import revenantSkin from './assets/RevenantMephistoSkin.png';
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
-import type { Container, Engine } from "@tsparticles/engine";
+import type { Engine } from "@tsparticles/engine";
   
 type WeaponsData = {
   warframe_weapons: {
@@ -18,18 +18,48 @@ type WeaponsData = {
   }
 };
 
-function isTradeableWeapon(name: string) {
-  const prefixesAndSuffixes = ['Kuva ', 'Tenet ', 'Vandal', 'Prime', 'Synoid ', 'Sancti ', 'Secura ', 'Telos ', 'Vaykor ', 'Prisma ', ' Wraith'];
-  if (prefixesAndSuffixes.some(p => name.includes(p))) return true;
+function normalizeWeaponNameForMarket(name: string) {
+  return name.toLowerCase().trim().replace(/\s+/g, '_');
+}
 
-  const specificTradeable = [
-    'Aeolak', 'Arum Spinosa', 'Cinta', 'Cortege', 'Cyngas', 'Mandonel', 'Morgha', 'Phaedra', 
-    'Sporothrix', 'Agkuza', 'Kaszas', 'Onorix', 'Rathbone', 'Gotva Prime', 'Hespar',
-    'Pennant', 'Korumm', 'Nepheri', 'Athodai', 'Shedu', 'Carmine Penta', 'Centaur', 'Corvas',
-    'Dual Decurion', 'Fluctus', 'Knux', 'Velocitus', 'Larkspur', 'Rauta'
-  ];
-  
-  return specificTradeable.includes(name);
+function getMarketSlugCandidates(name: string) {
+  const base = normalizeWeaponNameForMarket(name);
+  const normalized = base
+    .replace(/&/g, 'and')
+    .replace(/'/g, '')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return Array.from(
+    new Set([
+      base,
+      `${base}_set`,
+      normalized,
+      `${normalized}_set`,
+    ]),
+  );
+}
+
+function extractMarketItemUrlNames(payload: unknown): string[] {
+  const source = payload as {
+    data?: unknown[] | { items?: unknown[] };
+    items?: unknown[];
+    payload?: { items?: unknown[] };
+  };
+
+  let rawItems: unknown[] = [];
+
+  if (Array.isArray(source)) rawItems = source;
+  else if (Array.isArray(source.data)) rawItems = source.data;
+  else if (Array.isArray(source.items)) rawItems = source.items;
+  else if (Array.isArray(source.payload?.items)) rawItems = source.payload.items;
+  else if (Array.isArray(source.data?.items)) rawItems = source.data.items;
+
+  return rawItems
+    .map((item) => (item as { url_name?: unknown }).url_name)
+    .filter((urlName): urlName is string => typeof urlName === 'string')
+    .map((urlName) => urlName.toLowerCase());
 }
 
 export default function App() {
@@ -53,6 +83,7 @@ export default function App() {
     const saved = localStorage.getItem('wf_priority_weapons');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [marketItemUrlNames, setMarketItemUrlNames] = useState<Set<string>>(new Set());
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,8 +101,34 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  const particlesLoaded = useCallback(async (_container: Container | undefined) => {
+  const particlesLoaded = useCallback(async () => {
     // ready
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadMarketItems = async () => {
+      try {
+        const response = await fetch('https://api.warframe.market/v2/items', {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const urlNames = extractMarketItemUrlNames(payload);
+        if (urlNames.length > 0) {
+          setMarketItemUrlNames(new Set(urlNames));
+        }
+      } catch {
+        // Fallback keeps Market (?) links if API cannot be reached
+      }
+    };
+
+    void loadMarketItems();
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -104,7 +161,7 @@ export default function App() {
         } else {
           alert("Le fichier JSON n'a pas le bon format.");
         }
-      } catch (err) {
+      } catch {
         alert("Erreur de lecture du fichier JSON.");
       }
     };
@@ -144,10 +201,15 @@ export default function App() {
 
   const applyFilter = useCallback((weapons: string[]) => {
     let result = [...weapons];
-    if (filter === 'Kuva') result = result.filter(w => w.includes('Kuva '));
-    else if (filter === 'Tenet') result = result.filter(w => w.startsWith('Tenet '));
-    else if (filter === 'Coda') result = result.filter(w => w.startsWith('Coda '));
-    else if (filter === 'Standard') result = result.filter(w => !w.includes('Kuva ') && !w.startsWith('Tenet ') && !w.startsWith('Coda '));
+    if (filter === 'Kuva') result = result.filter(w => w.toLowerCase().includes('kuva'));
+    else if (filter === 'Tenet') result = result.filter(w => w.toLowerCase().includes('tenet'));
+    else if (filter === 'Coda') result = result.filter(w => w.toLowerCase().includes('coda'));
+    else if (filter === 'Standard') {
+      result = result.filter(w => {
+        const name = w.toLowerCase();
+        return !name.includes('kuva') && !name.includes('tenet') && !name.includes('coda');
+      });
+    }
     return result;
   }, [filter]);
 
@@ -324,6 +386,7 @@ export default function App() {
             hideOwned={hideOwned}
             priority={priorityWeapons}
             onTogglePriority={togglePriority}
+            marketItemUrlNames={marketItemUrlNames}
           />
         )}
         <CategorySection 
@@ -335,6 +398,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
+          marketItemUrlNames={marketItemUrlNames}
         />
         <CategorySection 
           id="secondary"
@@ -345,6 +409,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
+          marketItemUrlNames={marketItemUrlNames}
         />
         <CategorySection 
           id="melee"
@@ -355,6 +420,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
+          marketItemUrlNames={marketItemUrlNames}
         />
 
       </main>
@@ -376,7 +442,8 @@ function CategorySection({
   onToggle,
   hideOwned,
   priority,
-  onTogglePriority
+  onTogglePriority,
+  marketItemUrlNames
 }: { 
   id: string,
   title: string, 
@@ -385,7 +452,8 @@ function CategorySection({
   onToggle: (w: string) => void,
   hideOwned: boolean,
   priority: Set<string>,
-  onTogglePriority: (w: string) => void
+  onTogglePriority: (w: string) => void,
+  marketItemUrlNames: Set<string>
 }) {
 
   const filteredWeapons = useMemo(() => {
@@ -416,6 +484,7 @@ function CategorySection({
               onToggle={() => onToggle(weapon)}
               isPriority={priority.has(weapon)}
               onTogglePriority={() => onTogglePriority(weapon)}
+              marketItemUrlNames={marketItemUrlNames}
             />
 
           ))}
@@ -430,40 +499,41 @@ function WeaponCard({
   isOwned,
   onToggle,
   isPriority,
-  onTogglePriority
+  onTogglePriority,
+  marketItemUrlNames
 }: { 
   weapon: string, 
   isOwned: boolean,
   onToggle: () => void,
   isPriority: boolean,
-  onTogglePriority: () => void
+  onTogglePriority: () => void,
+  marketItemUrlNames: Set<string>
 }) {
 
-  const formattedNameMarket = weapon.toLowerCase().replace(/ /g, '_');
+  const marketCandidates = getMarketSlugCandidates(weapon);
+  const defaultSlug = marketCandidates[0];
+  const matchedSlug = marketCandidates.find((candidate) => marketItemUrlNames.has(candidate)) ?? null;
   const formattedNameWiki = weapon.replace(/ /g, '_');
 
   const wikiUrl = `https://wiki.warframe.com/w/${formattedNameWiki}`;
 
   let marketUrl = '';
-  let isSpecial = false;
+  let isTradeable = false;
+  const isKuva = weapon.toLowerCase().includes('kuva');
+  const isTenet = weapon.toLowerCase().includes('tenet');
 
-  if (weapon.startsWith('Kuva ')) {
-    marketUrl = `https://warframe.market/auctions/search?type=lich&weapon_url_name=${formattedNameMarket}`;
-    isSpecial = true;
-  } else if (weapon.startsWith('Tenet ')) {
-    marketUrl = `https://warframe.market/auctions/search?type=sister&weapon_url_name=${formattedNameMarket}`;
-    isSpecial = true;
+  if (matchedSlug) {
+    marketUrl = `https://warframe.market/items/${matchedSlug}?type=sell`;
+    isTradeable = true;
+  } else if (isKuva) {
+    marketUrl = `https://warframe.market/auctions/search?type=lich&weapon_url_name=${defaultSlug}`;
+    isTradeable = true;
+  } else if (isTenet) {
+    marketUrl = `https://warframe.market/auctions/search?type=sister&weapon_url_name=${defaultSlug}`;
+    isTradeable = true;
   } else {
-    const noSetVariants = ['Prisma', 'Wraith', 'Sancti', 'Secura', 'Telos', 'Vaykor', 'Synoid', 'Mara'];
-    const needsSet = !noSetVariants.some(v => weapon.includes(v));
-    marketUrl = `https://warframe.market/items/${formattedNameMarket}${needsSet ? '_set' : ''}`;
+    marketUrl = `https://warframe.market/items/${defaultSlug}?type=sell`;
   }
-
-  const fullMarketUrl = isSpecial ? marketUrl : `${marketUrl}?type=sell`;
-
-
-
-  const isTradeable = isTradeableWeapon(weapon);
 
   // Image URL using Wiki logic
   const imageUrl = `https://wiki.warframe.com/images/${weapon.replace(/ /g, '')}.png`;
@@ -503,12 +573,12 @@ function WeaponCard({
         </a>
         
         {isTradeable ? (
-          <a href={fullMarketUrl} target="_blank" rel="noreferrer" className="link-item market">
+          <a href={marketUrl} target="_blank" rel="noreferrer" className="link-item market">
             <img src={platIcon} alt="Market" className="icon" />
             Market
           </a>
         ) : (
-          <a href={fullMarketUrl} target="_blank" rel="noreferrer" className="link-item uncertain" title="Probablement non-achetable. Cliquez pour chercher quand même.">
+          <a href={marketUrl} target="_blank" rel="noreferrer" className="link-item uncertain" title="Probablement non-achetable. Cliquez pour chercher quand même.">
             Market (?)
           </a>
         )}
