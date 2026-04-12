@@ -57,9 +57,9 @@ function extractMarketItemUrlNames(payload: unknown): string[] {
   else if (Array.isArray(source.data?.items)) rawItems = source.data.items;
 
   return rawItems
-    .map((item) => (item as { url_name?: unknown }).url_name)
-    .filter((urlName): urlName is string => typeof urlName === 'string')
-    .map((urlName) => urlName.toLowerCase());
+    .map((item) => (item as { slug?: unknown; url_name?: unknown }).slug ?? (item as { slug?: unknown; url_name?: unknown }).url_name)
+    .filter((slug): slug is string => typeof slug === 'string')
+    .map((slug) => slug.toLowerCase());
 }
 
 export default function App() {
