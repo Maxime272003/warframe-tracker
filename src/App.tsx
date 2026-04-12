@@ -33,10 +33,10 @@ function getMarketSlugCandidates(name: string) {
 
   return Array.from(
     new Set([
-      base,
       `${base}_set`,
-      normalized,
+      base,
       `${normalized}_set`,
+      normalized,
     ]),
   );
 }
@@ -83,7 +83,27 @@ export default function App() {
     const saved = localStorage.getItem('wf_priority_weapons');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
-  const [marketItemUrlNames, setMarketItemUrlNames] = useState<Set<string>>(new Set());
+  const [marketSlugs, setMarketSlugs] = useState<Set<string>>(() => {
+    const CACHE_KEY = 'wf_market_slugs_cache_v1';
+    const CACHE_TS_KEY = 'wf_market_slugs_cache_ts_v1';
+    const CACHE_TTL_MS = 1000 * 60 * 60 * 12; // 12h
+
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const cachedTs = Number(localStorage.getItem(CACHE_TS_KEY) || '0');
+      const isFresh = cached && Number.isFinite(cachedTs) && (Date.now() - cachedTs < CACHE_TTL_MS);
+      if (isFresh) {
+        const parsed = JSON.parse(cached) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return new Set(parsed);
+        }
+      }
+    } catch {
+      // ignore cache read errors
+    }
+
+    return new Set();
+  });
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +127,8 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const CACHE_KEY = 'wf_market_slugs_cache_v1';
+    const CACHE_TS_KEY = 'wf_market_slugs_cache_ts_v1';
 
     const loadMarketItems = async () => {
       try {
@@ -117,9 +139,11 @@ export default function App() {
         if (!response.ok) return;
 
         const payload = await response.json();
-        const urlNames = extractMarketItemUrlNames(payload);
-        if (urlNames.length > 0) {
-          setMarketItemUrlNames(new Set(urlNames));
+        const slugs = extractMarketItemUrlNames(payload);
+        if (slugs.length > 0) {
+          setMarketSlugs(new Set(slugs));
+          localStorage.setItem(CACHE_KEY, JSON.stringify(slugs));
+          localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
         }
       } catch {
         // Fallback keeps Market (?) links if API cannot be reached
@@ -386,7 +410,7 @@ export default function App() {
             hideOwned={hideOwned}
             priority={priorityWeapons}
             onTogglePriority={togglePriority}
-            marketItemUrlNames={marketItemUrlNames}
+            marketSlugs={marketSlugs}
           />
         )}
         <CategorySection 
@@ -398,7 +422,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
-          marketItemUrlNames={marketItemUrlNames}
+          marketSlugs={marketSlugs}
         />
         <CategorySection 
           id="secondary"
@@ -409,7 +433,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
-          marketItemUrlNames={marketItemUrlNames}
+          marketSlugs={marketSlugs}
         />
         <CategorySection 
           id="melee"
@@ -420,7 +444,7 @@ export default function App() {
           hideOwned={hideOwned}
           priority={priorityWeapons}
           onTogglePriority={togglePriority}
-          marketItemUrlNames={marketItemUrlNames}
+          marketSlugs={marketSlugs}
         />
 
       </main>
@@ -443,7 +467,7 @@ function CategorySection({
   hideOwned,
   priority,
   onTogglePriority,
-  marketItemUrlNames
+  marketSlugs
 }: { 
   id: string,
   title: string, 
@@ -453,7 +477,7 @@ function CategorySection({
   hideOwned: boolean,
   priority: Set<string>,
   onTogglePriority: (w: string) => void,
-  marketItemUrlNames: Set<string>
+  marketSlugs: Set<string>
 }) {
 
   const filteredWeapons = useMemo(() => {
@@ -484,7 +508,7 @@ function CategorySection({
               onToggle={() => onToggle(weapon)}
               isPriority={priority.has(weapon)}
               onTogglePriority={() => onTogglePriority(weapon)}
-              marketItemUrlNames={marketItemUrlNames}
+              marketSlugs={marketSlugs}
             />
 
           ))}
@@ -500,19 +524,19 @@ function WeaponCard({
   onToggle,
   isPriority,
   onTogglePriority,
-  marketItemUrlNames
+  marketSlugs
 }: { 
   weapon: string, 
   isOwned: boolean,
   onToggle: () => void,
   isPriority: boolean,
   onTogglePriority: () => void,
-  marketItemUrlNames: Set<string>
+  marketSlugs: Set<string>
 }) {
 
   const marketCandidates = getMarketSlugCandidates(weapon);
-  const defaultSlug = marketCandidates[0];
-  const matchedSlug = marketCandidates.find((candidate) => marketItemUrlNames.has(candidate)) ?? null;
+  const baseSlug = normalizeWeaponNameForMarket(weapon);
+  const matchedSlug = marketCandidates.find((candidate) => marketSlugs.has(candidate)) ?? null;
   const formattedNameWiki = weapon.replace(/ /g, '_');
 
   const wikiUrl = `https://wiki.warframe.com/w/${formattedNameWiki}`;
@@ -526,13 +550,13 @@ function WeaponCard({
     marketUrl = `https://warframe.market/items/${matchedSlug}?type=sell`;
     isTradeable = true;
   } else if (isKuva) {
-    marketUrl = `https://warframe.market/auctions/search?type=lich&weapon_url_name=${defaultSlug}`;
+    marketUrl = `https://warframe.market/auctions/search?type=lich&weapon_url_name=${baseSlug}`;
     isTradeable = true;
   } else if (isTenet) {
-    marketUrl = `https://warframe.market/auctions/search?type=sister&weapon_url_name=${defaultSlug}`;
+    marketUrl = `https://warframe.market/auctions/search?type=sister&weapon_url_name=${baseSlug}`;
     isTradeable = true;
   } else {
-    marketUrl = `https://warframe.market/items/${defaultSlug}?type=sell`;
+    marketUrl = `https://warframe.market/items/${baseSlug}?type=sell`;
   }
 
   // Image URL using Wiki logic
