@@ -4,8 +4,8 @@ import type { Engine } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
 import voltSkin from '../../assets/VoltRaijinSkin.png';
 import revenantSkin from '../../assets/RevenantMephistoSkin.png';
-import type { DisplayCategory, ItemFilter } from './types';
-import { STORAGE_KEYS, ITEM_FILTER_OPTIONS, DISPLAY_CATEGORIES } from './constants';
+import type { ItemFilter } from './types';
+import { STORAGE_KEYS, ITEM_FILTER_OPTIONS } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { filterItemNames, getRemainingItemCount, parseImportJson } from './utils';
@@ -33,17 +33,9 @@ const parseSet = (raw: string): Set<string> => {
 };
 const serializeSet = (value: Set<string>): string => JSON.stringify(Array.from(value));
 
-const CATEGORY_JSON_KEYS: Record<DisplayCategory, string> = {
-  Warframes: 'warframes',
-  Primary: 'primary',
-  Secondary: 'secondary',
-  Melee: 'melee',
-  Archwings: 'archwings',
-  Companions: 'companions',
-};
-
 export default function ArsenalTracker() {
-  const [itemsCatalog, isLoading] = useItemsCatalog();
+  const [itemsCatalog, isLoading, categories] = useItemsCatalog();
+  const [selectedCategory, setSelectedCategory] = usePersistentState<string>(STORAGE_KEYS.selectedCategory, 'All', (raw) => raw, (value) => value);
   const [hideOwned, setHideOwned] = usePersistentState<boolean>(STORAGE_KEYS.hideOwned, false, parseBoolean, serializeBoolean);
   const [filter, setFilter] = usePersistentState<ItemFilter>(STORAGE_KEYS.filter, 'All', parseItemFilter, serializeItemFilter);
   const [ownedItems, setOwnedItems] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedItems, new Set<string>(), parseSet, serializeSet);
@@ -76,15 +68,15 @@ export default function ArsenalTracker() {
         const remainingCatalog = parseImportJson(parsed);
 
         if (!remainingCatalog) {
-          alert('Invalid JSON format. Expected keys: warframes, primary, secondary, melee, archwings, companions.');
+          alert('Invalid JSON format.');
           return;
         }
 
         // Build owned set: everything in the catalog that is NOT in the imported remaining list
         const newOwnedItems = new Set<string>();
-        for (const category of DISPLAY_CATEGORIES) {
-          const allItemsInCategory = itemsCatalog[category];
-          const remainingInCategory = new Set(remainingCatalog[category]);
+        for (const category of categories) {
+          const allItemsInCategory = itemsCatalog[category] ?? [];
+          const remainingInCategory = new Set(remainingCatalog[category] ?? []);
 
           for (const item of allItemsInCategory) {
             if (!remainingInCategory.has(item)) {
@@ -102,7 +94,7 @@ export default function ArsenalTracker() {
 
     reader.readAsText(file);
     event.currentTarget.value = '';
-  }, [itemsCatalog, setOwnedItems]);
+  }, [itemsCatalog, categories, setOwnedItems]);
 
   const toggleItem = useCallback((item: string) => {
     setOwnedItems((previousOwnedItems) => {
@@ -142,39 +134,39 @@ export default function ArsenalTracker() {
   const searchLower = searchQuery.toLowerCase().trim();
 
   const filteredByCategory = useMemo(() => {
-    const result: Record<DisplayCategory, string[]> = {} as Record<DisplayCategory, string[]>;
-    for (const category of DISPLAY_CATEGORIES) {
-      let items = filterItemNames(itemsCatalog[category], filter);
+    const result: Record<string, string[]> = {};
+    for (const category of categories) {
+      let items = filterItemNames(itemsCatalog[category] ?? [], filter);
       if (searchLower) {
         items = items.filter((item) => item.toLowerCase().includes(searchLower));
       }
       result[category] = items;
     }
     return result;
-  }, [itemsCatalog, filter, searchLower]);
+  }, [itemsCatalog, categories, filter, searchLower]);
 
   const totalRemaining = useMemo(() => {
     let total = 0;
-    for (const category of DISPLAY_CATEGORIES) {
-      total += getRemainingItemCount(filteredByCategory[category], ownedItems);
+    for (const category of categories) {
+      total += getRemainingItemCount(filteredByCategory[category] ?? [], ownedItems);
     }
     return total;
-  }, [filteredByCategory, ownedItems]);
+  }, [filteredByCategory, categories, ownedItems]);
 
   // Priority items across all categories
   const priorityFiltered = useMemo(() => {
-    const allFilteredItems = DISPLAY_CATEGORIES.flatMap((category) => filteredByCategory[category]);
+    const allFilteredItems = categories.flatMap((category) => filteredByCategory[category] ?? []);
     return allFilteredItems.filter(
       (item) => priorityItems.has(item) && (!hideOwned || !ownedItems.has(item)),
     );
-  }, [filteredByCategory, priorityItems, hideOwned, ownedItems]);
+  }, [filteredByCategory, categories, priorityItems, hideOwned, ownedItems]);
 
   const exportRemainingJson = useCallback(() => {
     const remaining: Record<string, string[]> = {};
 
-    for (const category of DISPLAY_CATEGORIES) {
-      const key = CATEGORY_JSON_KEYS[category];
-      remaining[key] = itemsCatalog[category].filter((item) => !ownedItems.has(item));
+    for (const category of categories) {
+      const key = category.toLowerCase().replace(/[\s-]/g, '_');
+      remaining[key] = (itemsCatalog[category] ?? []).filter((item) => !ownedItems.has(item));
     }
 
     const blob = new Blob([JSON.stringify(remaining, null, 2)], { type: 'application/json' });
@@ -184,7 +176,7 @@ export default function ArsenalTracker() {
     anchor.download = 'remaining_items.json';
     anchor.click();
     URL.revokeObjectURL(url);
-  }, [itemsCatalog, ownedItems]);
+  }, [itemsCatalog, categories, ownedItems]);
 
   const particlesOptions = useMemo(() => ({
     fullScreen: { enable: true, zIndex: -1 },
@@ -227,6 +219,53 @@ export default function ArsenalTracker() {
     detectRetina: true,
   }), []);
 
+  const categoriesWithStatus = useMemo(() => {
+    return categories.map(category => {
+      const allItemsInCategory = filteredByCategory[category] ?? [];
+      const unownedItemsInCategory = allItemsInCategory.filter(i => !ownedItems.has(i));
+      
+      const displayedItemsCount = hideOwned 
+        ? unownedItemsInCategory.length 
+        : allItemsInCategory.length;
+
+      const remainingCount = unownedItemsInCategory.length;
+      
+      return { 
+        category, 
+        remainingCount, 
+        displayedItemsCount,
+        hasMatches: allItemsInCategory.length > 0
+      };
+    });
+  }, [categories, filteredByCategory, ownedItems, hideOwned]);
+
+  const visibleCategories = useMemo(() => {
+    return categoriesWithStatus
+      .filter(status => {
+        // Must have something to show (matching search/filter)
+        if (status.displayedItemsCount === 0) return false;
+
+        // Only hide completed categories IF 'Hide owned' is checked
+        if (hideOwned && status.remainingCount === 0) return false;
+
+        // If a specific category is selected, only that one
+        if (selectedCategory !== 'All' && status.category !== selectedCategory) return false;
+
+        return true;
+      })
+      .map(status => status.category);
+  }, [categoriesWithStatus, selectedCategory, hideOwned]);
+
+  const navCategories = useMemo(() => {
+    return categoriesWithStatus
+      .filter(status => {
+        if (status.displayedItemsCount === 0) return false;
+        if (hideOwned && status.remainingCount === 0) return false;
+        return true;
+      })
+      .map(status => status.category);
+  }, [categoriesWithStatus, hideOwned]);
+
   return (
     <div className="app-container">
       {particlesReady && (
@@ -250,10 +289,20 @@ export default function ArsenalTracker() {
 
       <div className="controls">
         <div className="top-nav">
-          {DISPLAY_CATEGORIES.map((category) => (
-            <a key={category} href={`#${category.toLowerCase()}`} className="nav-link">
+          <button 
+            className={`nav-link ${selectedCategory === 'All' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('All')}
+          >
+            All
+          </button>
+          {navCategories.map((category) => (
+            <button 
+              key={category} 
+              className={`nav-link ${selectedCategory === category ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(category)}
+            >
               {category}
-            </a>
+            </button>
           ))}
         </div>
 
@@ -291,7 +340,10 @@ export default function ArsenalTracker() {
       )}
 
       <main>
-        {priorityFiltered.length > 0 && (
+        {priorityFiltered.length > 0 && (selectedCategory === 'All' || priorityFiltered.some(item => {
+           // We can check if any filtered items in the selected category are priorities
+           return visibleCategories.some(cat => (selectedCategory === 'All' || cat === selectedCategory) && filteredByCategory[cat]?.some(i => i === item));
+        })) && (
           <CategorySection
             id="priorities"
             title="Priorities"
@@ -306,13 +358,13 @@ export default function ArsenalTracker() {
           />
         )}
 
-        {DISPLAY_CATEGORIES.map((category) => (
+        {visibleCategories.map((category) => (
           <CategorySection
             key={category}
-            id={category.toLowerCase()}
+            id={category.toLowerCase().replace(/[\s-]/g, '_')}
             title={category}
             category={category}
-            items={filteredByCategory[category].filter((item) => !priorityItems.has(item))}
+            items={(filteredByCategory[category] ?? []).filter((item) => !priorityItems.has(item))}
             ownedItems={ownedItems}
             priorityItems={priorityItems}
             hideOwned={hideOwned}

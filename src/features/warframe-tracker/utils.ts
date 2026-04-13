@@ -1,17 +1,4 @@
-import type { DisplayCategory, ItemCatalog, ItemFilter } from './types';
-import { EMPTY_ITEM_CATALOG } from './types';
-import { DISPLAY_CATEGORIES } from './constants';
-
-export function isItemCatalog(value: unknown): value is ItemCatalog {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const data = value as Record<string, unknown>;
-  return DISPLAY_CATEGORIES.every(
-    (category) => Array.isArray(data[category]),
-  );
-}
+import type { ItemCatalog, ItemFilter } from './types';
 
 export function parseImportJson(value: unknown): ItemCatalog | null {
   if (typeof value !== 'object' || value === null) {
@@ -19,21 +6,12 @@ export function parseImportJson(value: unknown): ItemCatalog | null {
   }
 
   const data = value as Record<string, unknown>;
-  const catalog: ItemCatalog = { ...EMPTY_ITEM_CATALOG };
-  const keys: Record<string, DisplayCategory> = {
-    warframes: 'Warframes',
-    primary: 'Primary',
-    secondary: 'Secondary',
-    melee: 'Melee',
-    archwings: 'Archwings',
-    companions: 'Companions',
-  };
-
+  const catalog: ItemCatalog = {};
   let hasAnyKey = false;
 
-  for (const [jsonKey, displayCategory] of Object.entries(keys)) {
-    if (Array.isArray(data[jsonKey])) {
-      catalog[displayCategory] = (data[jsonKey] as unknown[]).filter(
+  for (const [key, val] of Object.entries(data)) {
+    if (Array.isArray(val)) {
+      catalog[key] = (val as unknown[]).filter(
         (item): item is string => typeof item === 'string',
       );
       hasAnyKey = true;
@@ -129,11 +107,11 @@ export function getWikiUrl(item: string): string {
   return `https://wiki.warframe.com/w/${item.replace(/ /g, '_')}`;
 }
 
-const NO_THUMB_WARFRAMES = new Set(['Bonewidow', 'Voidrig']);
+const NO_THUMB_ITEMS = new Set(['Bonewidow', 'Voidrig']);
 
 export function getItemImageUrl(item: string, category?: string): string {
   const name = item.replace(/[\s-]/g, '');
-  if (category === 'Warframes' && !NO_THUMB_WARFRAMES.has(item)) {
+  if (category === 'Warframes' && !NO_THUMB_ITEMS.has(item)) {
     return `https://wiki.warframe.com/images/${name}_Thumb.png`;
   }
   return `https://wiki.warframe.com/images/${name}.png`;

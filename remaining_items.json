@@ -1,6 +1,40 @@
 {
-  "warframes": [
-    "Excalibur Prime"
+  "arch_gun": [
+    "Cortege",
+    "Kuva Ayanga",
+    "Kuva Grattler",
+    "Morgha"
+  ],
+  "arch_melee": [],
+  "archwing": [],
+  "melee": [
+    "Coda Caustacyst",
+    "Coda Hirudo",
+    "Coda Mire",
+    "Coda Motovore",
+    "Heliocor",
+    "Kuva Ghoulsaw",
+    "Machete",
+    "Sibear",
+    "Sigma & Octantis",
+    "Skana Prime",
+    "Tenet Agendus",
+    "Tenet Exec",
+    "Tenet Grigori",
+    "Tenet Livia",
+    "Vitrica",
+    "War"
+  ],
+  "misc": [
+    "Bad Baby",
+    "Feverspine",
+    "Flatbelly",
+    "Runway"
+  ],
+  "pets": [
+    "Bhaira Hound",
+    "Hec Hound",
+    "Vasca Kavat"
   ],
   "primary": [
     "Coda Bubonico",
@@ -44,33 +78,8 @@
     "Tenet Plinx",
     "Tenet Spirex"
   ],
-  "melee": [
-    "Coda Caustacyst",
-    "Coda Hirudo",
-    "Coda Mire",
-    "Coda Motovore",
-    "Heliocor",
-    "Kuva Ghoulsaw",
-    "Machete",
-    "Sibear",
-    "Sigma & Octantis",
-    "Skana Prime",
-    "Tenet Agendus",
-    "Tenet Exec",
-    "Tenet Grigori",
-    "Tenet Livia",
-    "Vitrica",
-    "War"
-  ],
-  "archwings": [
-    "Cortege",
-    "Kuva Ayanga",
-    "Kuva Grattler",
-    "Morgha"
-  ],
-  "companions": [
-    "Bhaira Hound",
-    "Hec Hound",
-    "Vasca Kavat"
+  "sentinels": [],
+  "warframes": [
+    "Excalibur Prime"
   ]
 }

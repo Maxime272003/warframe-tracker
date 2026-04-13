@@ -102,12 +102,17 @@
   border-radius: 4px;
   background: rgba(0,0,0,0.2);
   transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.nav-link:hover {
+.nav-link:hover, .nav-link.active {
   background: var(--wf-accent-gold);
-  color: #fff;
+  color: #000;
   text-decoration: none;
+  border-color: var(--wf-accent-gold);
+  box-shadow: 0 0 10px var(--wf-accent-glow);
 }
 
 .upload-btn, .export-btn {

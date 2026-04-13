@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { API_TO_DISPLAY_CATEGORY, ITEMS_CATALOG_CACHE_TTL_MS, STORAGE_KEYS } from '../constants';
-import type { DisplayCategory, ItemCatalog } from '../types';
-import { EMPTY_ITEM_CATALOG } from '../types';
+import { EXCLUDED_ITEMS, ITEMS_CATALOG_CACHE_TTL_MS, STORAGE_KEYS } from '../constants';
+import type { ItemCatalog } from '../types';
 
 type ApiItem = {
   name?: string;
@@ -31,16 +30,7 @@ function readCachedCatalog(): ItemCatalog | null {
 }
 
 function buildCatalogFromApiData(data: ApiItem[]): ItemCatalog {
-  const catalog: ItemCatalog = {
-    Warframes: [],
-    Primary: [],
-    Secondary: [],
-    Melee: [],
-    Archwings: [],
-    Companions: [],
-  };
-
-  const EXCLUDED_ITEMS = new Set(['Helminth']);
+  const catalog: ItemCatalog = {};
 
   for (const item of data) {
     if (!item.name || !item.category || item.masterable !== true) {
@@ -51,31 +41,31 @@ function buildCatalogFromApiData(data: ApiItem[]): ItemCatalog {
       continue;
     }
 
-    const displayCategory: DisplayCategory | undefined = API_TO_DISPLAY_CATEGORY[item.category];
-    if (!displayCategory) {
-      continue;
-    }
-
     // Strip tags like "<ARCHWING> " from names
     const cleanName = item.name.replace(/<[^>]+>\s*/g, '').trim();
     if (!cleanName) {
       continue;
     }
 
-    catalog[displayCategory].push(cleanName);
+    const category = item.category;
+    if (!catalog[category]) {
+      catalog[category] = [];
+    }
+
+    catalog[category].push(cleanName);
   }
 
   // Sort each category alphabetically and deduplicate
-  for (const category of Object.keys(catalog) as DisplayCategory[]) {
+  for (const category of Object.keys(catalog)) {
     catalog[category] = Array.from(new Set(catalog[category])).sort((a, b) => a.localeCompare(b));
   }
 
   return catalog;
 }
 
-export function useItemsCatalog(): [ItemCatalog, boolean] {
+export function useItemsCatalog(): [ItemCatalog, boolean, string[]] {
   const [catalog, setCatalog] = useState<ItemCatalog>(() => {
-    return readCachedCatalog() ?? EMPTY_ITEM_CATALOG;
+    return readCachedCatalog() ?? {};
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -119,5 +109,8 @@ export function useItemsCatalog(): [ItemCatalog, boolean] {
     return () => controller.abort();
   }, []);
 
-  return [catalog, isLoading];
+  // Derive sorted category names
+  const categories = Object.keys(catalog).sort((a, b) => a.localeCompare(b));
+
+  return [catalog, isLoading, categories];
 }
