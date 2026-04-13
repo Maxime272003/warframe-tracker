@@ -1,24 +1,24 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import type { Engine } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
 import voltSkin from '../../assets/VoltRaijinSkin.png';
 import revenantSkin from '../../assets/RevenantMephistoSkin.png';
-import { EMPTY_WEAPON_CATALOG, type WeaponCatalog, type WeaponFilter } from './types';
-import { STORAGE_KEYS, WEAPON_FILTER_OPTIONS } from './constants';
+import type { DisplayCategory, ItemFilter } from './types';
+import { STORAGE_KEYS, ITEM_FILTER_OPTIONS, DISPLAY_CATEGORIES } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
-import { filterWeaponNames, getRemainingWeaponCount } from './utils';
+import { filterItemNames, getRemainingItemCount, parseImportJson } from './utils';
 import { useMarketSlugs } from './hooks/useMarketSlugs';
 import { usePersistentState } from './hooks/usePersistentState';
-import { useWeaponsCatalog } from './hooks/useWeaponsCatalog';
+import { useItemsCatalog } from './hooks/useItemsCatalog';
 
 const parseBoolean = (raw: string): boolean => raw === 'true';
 const serializeBoolean = (value: boolean): string => String(value);
-const parseWeaponFilter = (raw: string): WeaponFilter => {
-  return WEAPON_FILTER_OPTIONS.some((option) => option.value === raw) ? (raw as WeaponFilter) : 'All';
+const parseItemFilter = (raw: string): ItemFilter => {
+  return ITEM_FILTER_OPTIONS.some((option) => option.value === raw) ? (raw as ItemFilter) : 'All';
 };
-const serializeWeaponFilter = (value: WeaponFilter): string => value;
+const serializeItemFilter = (value: ItemFilter): string => value;
 const parseSet = (raw: string): Set<string> => {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -33,12 +33,22 @@ const parseSet = (raw: string): Set<string> => {
 };
 const serializeSet = (value: Set<string>): string => JSON.stringify(Array.from(value));
 
+const CATEGORY_JSON_KEYS: Record<DisplayCategory, string> = {
+  Warframes: 'warframes',
+  Primary: 'primary',
+  Secondary: 'secondary',
+  Melee: 'melee',
+  Archwings: 'archwings',
+  Companions: 'companions',
+};
+
 export default function ArsenalTracker() {
-  const [weaponsCatalog, setWeaponsCatalog] = useWeaponsCatalog(EMPTY_WEAPON_CATALOG);
+  const [itemsCatalog, isLoading] = useItemsCatalog();
   const [hideOwned, setHideOwned] = usePersistentState<boolean>(STORAGE_KEYS.hideOwned, false, parseBoolean, serializeBoolean);
-  const [filter, setFilter] = usePersistentState<WeaponFilter>(STORAGE_KEYS.filter, 'All', parseWeaponFilter, serializeWeaponFilter);
-  const [ownedWeapons, setOwnedWeapons] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedWeapons, new Set<string>(), parseSet, serializeSet);
-  const [priorityWeapons, setPriorityWeapons] = usePersistentState<Set<string>>(STORAGE_KEYS.priorityWeapons, new Set<string>(), parseSet, serializeSet);
+  const [filter, setFilter] = usePersistentState<ItemFilter>(STORAGE_KEYS.filter, 'All', parseItemFilter, serializeItemFilter);
+  const [ownedItems, setOwnedItems] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedItems, new Set<string>(), parseSet, serializeSet);
+  const [priorityItems, setPriorityItems] = usePersistentState<Set<string>>(STORAGE_KEYS.priorityItems, new Set<string>(), parseSet, serializeSet);
+  const [searchQuery, setSearchQuery] = useState('');
   const marketSlugs = useMarketSlugs();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [particlesReady, setParticlesReady] = useState(false);
@@ -53,7 +63,7 @@ export default function ArsenalTracker() {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     if (!file) {
       return;
@@ -63,127 +73,164 @@ export default function ArsenalTracker() {
     reader.onload = (loadEvent) => {
       try {
         const parsed = JSON.parse(String(loadEvent.target?.result ?? '')) as unknown;
-        if (parsed && typeof parsed === 'object' && 'warframe_weapons' in parsed) {
-          setWeaponsCatalog(parsed as WeaponCatalog);
-          alert('Liste des armes importée avec succès !');
-        } else {
-          alert("Le fichier JSON n'a pas le bon format.");
+        const remainingCatalog = parseImportJson(parsed);
+
+        if (!remainingCatalog) {
+          alert('Invalid JSON format. Expected keys: warframes, primary, secondary, melee, archwings, companions.');
+          return;
         }
+
+        // Build owned set: everything in the catalog that is NOT in the imported remaining list
+        const newOwnedItems = new Set<string>();
+        for (const category of DISPLAY_CATEGORIES) {
+          const allItemsInCategory = itemsCatalog[category];
+          const remainingInCategory = new Set(remainingCatalog[category]);
+
+          for (const item of allItemsInCategory) {
+            if (!remainingInCategory.has(item)) {
+              newOwnedItems.add(item);
+            }
+          }
+        }
+
+        setOwnedItems(newOwnedItems);
+        alert(`Import successful! ${newOwnedItems.size} items marked as owned.`);
       } catch {
-        alert('Erreur de lecture du fichier JSON.');
+        alert('Error reading JSON file.');
       }
     };
 
     reader.readAsText(file);
     event.currentTarget.value = '';
-  };
+  }, [itemsCatalog, setOwnedItems]);
 
-  const toggleWeapon = (weapon: string) => {
-    setOwnedWeapons((previousOwnedWeapons) => {
-      const nextOwnedWeapons = new Set(previousOwnedWeapons);
+  const toggleItem = useCallback((item: string) => {
+    setOwnedItems((previousOwnedItems) => {
+      const nextOwnedItems = new Set(previousOwnedItems);
 
-      if (nextOwnedWeapons.has(weapon)) {
-        nextOwnedWeapons.delete(weapon);
-        return nextOwnedWeapons;
+      if (nextOwnedItems.has(item)) {
+        nextOwnedItems.delete(item);
+        return nextOwnedItems;
       }
 
-      nextOwnedWeapons.add(weapon);
-      setPriorityWeapons((previousPriorityWeapons) => {
-        const nextPriorityWeapons = new Set(previousPriorityWeapons);
-        nextPriorityWeapons.delete(weapon);
-        return nextPriorityWeapons;
+      nextOwnedItems.add(item);
+      setPriorityItems((previousPriorityItems) => {
+        const nextPriorityItems = new Set(previousPriorityItems);
+        nextPriorityItems.delete(item);
+        return nextPriorityItems;
       });
 
-      return nextOwnedWeapons;
+      return nextOwnedItems;
     });
-  };
+  }, [setOwnedItems, setPriorityItems]);
 
-  const togglePriority = (weapon: string) => {
-    setPriorityWeapons((previousPriorityWeapons) => {
-      const nextPriorityWeapons = new Set(previousPriorityWeapons);
+  const togglePriority = useCallback((item: string) => {
+    setPriorityItems((previousPriorityItems) => {
+      const nextPriorityItems = new Set(previousPriorityItems);
 
-      if (nextPriorityWeapons.has(weapon)) {
-        nextPriorityWeapons.delete(weapon);
+      if (nextPriorityItems.has(item)) {
+        nextPriorityItems.delete(item);
       } else {
-        nextPriorityWeapons.add(weapon);
+        nextPriorityItems.add(item);
       }
 
-      return nextPriorityWeapons;
+      return nextPriorityItems;
     });
-  };
+  }, [setPriorityItems]);
 
-  const weaponGroups = weaponsCatalog.warframe_weapons;
-  const filteredPrimary = filterWeaponNames(weaponGroups.primary ?? [], filter);
-  const filteredSecondary = filterWeaponNames(weaponGroups.secondary ?? [], filter);
-  const filteredMelee = filterWeaponNames(weaponGroups.melee ?? [], filter);
-  const allFilteredWeapons = [...filteredPrimary, ...filteredSecondary, ...filteredMelee];
-  const priorityFiltered = allFilteredWeapons.filter((weapon) => priorityWeapons.has(weapon) && (!hideOwned || !ownedWeapons.has(weapon)));
-  const remainingToFarm = getRemainingWeaponCount(allFilteredWeapons, ownedWeapons);
+  // Memoize filtered items per category
+  const searchLower = searchQuery.toLowerCase().trim();
 
-  const exportRemainingJson = () => {
-    const remaining = {
-      warframe_weapons: {
-        primary: weaponsCatalog.warframe_weapons.primary.filter((weapon) => !ownedWeapons.has(weapon)),
-        secondary: weaponsCatalog.warframe_weapons.secondary.filter((weapon) => !ownedWeapons.has(weapon)),
-        melee: weaponsCatalog.warframe_weapons.melee.filter((weapon) => !ownedWeapons.has(weapon)),
-      },
-    };
+  const filteredByCategory = useMemo(() => {
+    const result: Record<DisplayCategory, string[]> = {} as Record<DisplayCategory, string[]>;
+    for (const category of DISPLAY_CATEGORIES) {
+      let items = filterItemNames(itemsCatalog[category], filter);
+      if (searchLower) {
+        items = items.filter((item) => item.toLowerCase().includes(searchLower));
+      }
+      result[category] = items;
+    }
+    return result;
+  }, [itemsCatalog, filter, searchLower]);
+
+  const totalRemaining = useMemo(() => {
+    let total = 0;
+    for (const category of DISPLAY_CATEGORIES) {
+      total += getRemainingItemCount(filteredByCategory[category], ownedItems);
+    }
+    return total;
+  }, [filteredByCategory, ownedItems]);
+
+  // Priority items across all categories
+  const priorityFiltered = useMemo(() => {
+    const allFilteredItems = DISPLAY_CATEGORIES.flatMap((category) => filteredByCategory[category]);
+    return allFilteredItems.filter(
+      (item) => priorityItems.has(item) && (!hideOwned || !ownedItems.has(item)),
+    );
+  }, [filteredByCategory, priorityItems, hideOwned, ownedItems]);
+
+  const exportRemainingJson = useCallback(() => {
+    const remaining: Record<string, string[]> = {};
+
+    for (const category of DISPLAY_CATEGORIES) {
+      const key = CATEGORY_JSON_KEYS[category];
+      remaining[key] = itemsCatalog[category].filter((item) => !ownedItems.has(item));
+    }
 
     const blob = new Blob([JSON.stringify(remaining, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'remaining_weapons.json';
+    anchor.download = 'remaining_items.json';
     anchor.click();
     URL.revokeObjectURL(url);
-  };
+  }, [itemsCatalog, ownedItems]);
+
+  const particlesOptions = useMemo(() => ({
+    fullScreen: { enable: true, zIndex: -1 },
+    background: { color: { value: 'transparent' } },
+    fpsLimit: 60,
+    interactivity: {
+      events: { onHover: { enable: true, mode: 'grab' as const } },
+      modes: {
+        grab: {
+          distance: 200,
+          links: { opacity: 0.5, color: '#e2c076' },
+        },
+      },
+    },
+    particles: {
+      color: { value: '#e2c076' },
+      links: {
+        color: '#e2c076',
+        distance: 150,
+        enable: true,
+        opacity: 0.2,
+        width: 1,
+      },
+      move: {
+        direction: 'none' as const,
+        enable: true,
+        outModes: { default: 'bounce' as const },
+        random: true,
+        speed: 1,
+        straight: false,
+      },
+      number: {
+        density: { enable: true, width: 800 },
+        value: 80,
+      },
+      opacity: { value: 0.3 },
+      shape: { type: 'circle' },
+      size: { value: { min: 1, max: 3 } },
+    },
+    detectRetina: true,
+  }), []);
 
   return (
     <div className="app-container">
       {particlesReady && (
-        <Particles
-          id="tsparticles"
-          options={{
-            fullScreen: { enable: true, zIndex: -1 },
-            background: { color: { value: 'transparent' } },
-            fpsLimit: 60,
-            interactivity: {
-              events: { onHover: { enable: true, mode: 'grab' } },
-              modes: {
-                grab: {
-                  distance: 200,
-                  links: { opacity: 0.5, color: '#e2c076' },
-                },
-              },
-            },
-            particles: {
-              color: { value: '#e2c076' },
-              links: {
-                color: '#e2c076',
-                distance: 150,
-                enable: true,
-                opacity: 0.2,
-                width: 1,
-              },
-              move: {
-                direction: 'none',
-                enable: true,
-                outModes: { default: 'bounce' },
-                random: true,
-                speed: 1,
-                straight: false,
-              },
-              number: {
-                density: { enable: true, width: 800 },
-                value: 80,
-              },
-              opacity: { value: 0.3 },
-              shape: { type: 'circle' },
-              size: { value: { min: 1, max: 3 } },
-            },
-            detectRetina: true,
-          }}
-        />
+        <Particles id="tsparticles" options={particlesOptions} />
       )}
 
       <header className="header">
@@ -192,90 +239,88 @@ export default function ArsenalTracker() {
 
       <div className="pre-sticky-actions">
         <button className="export-btn" onClick={exportRemainingJson} type="button">
-          Exporter Restants
+          Export Remaining
         </button>
 
         <button className="upload-btn" onClick={() => fileInputRef.current?.click()} type="button">
-          Importer JSON
+          Import JSON
         </button>
         <input accept=".json" className="file-input" onChange={handleFileUpload} ref={fileInputRef} type="file" />
       </div>
 
       <div className="controls">
         <div className="top-nav">
-          <a href="#primary" className="nav-link">Principales</a>
-          <a href="#secondary" className="nav-link">Secondaires</a>
-          <a href="#melee" className="nav-link">Mêlée</a>
+          {DISPLAY_CATEGORIES.map((category) => (
+            <a key={category} href={`#${category.toLowerCase()}`} className="nav-link">
+              {category}
+            </a>
+          ))}
         </div>
 
         <div className="summary-stats">
-          {remainingToFarm} arme(s) {filter !== 'All' ? `(${filter.toLowerCase()}) ` : ''}restante(s) à farm
+          {isLoading ? 'Loading items...' : `${totalRemaining} item(s) remaining`}
         </div>
 
         <div className="controls-inline">
-          <select className="filter-select" value={filter} onChange={(event) => setFilter(event.target.value as WeaponFilter)}>
-            {WEAPON_FILTER_OPTIONS.map((option) => (
+          <input
+            type="text"
+            className="search-bar"
+            placeholder="Search items..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+
+          <select className="filter-select" value={filter} onChange={(event) => setFilter(event.target.value as ItemFilter)}>
+            {ITEM_FILTER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
 
           <label className="switch-container">
-            <span className="switch-label">Masquer acquises</span>
+            <span className="switch-label">Hide owned</span>
             <input checked={hideOwned} onChange={() => setHideOwned((currentValue) => !currentValue)} type="checkbox" />
           </label>
         </div>
       </div>
 
+      {isLoading && (
+        <div className="loading-state">
+          <div className="loading-spinner" />
+          <p>Fetching items from Warframe API...</p>
+        </div>
+      )}
+
       <main>
         {priorityFiltered.length > 0 && (
           <CategorySection
-            id="priority"
-            title="Priorités"
-            weapons={priorityFiltered}
-            ownedWeapons={ownedWeapons}
-            priorityWeapons={priorityWeapons}
+            id="priorities"
+            title="Priorities"
+            category="Priorities"
+            items={priorityFiltered}
+            ownedItems={ownedItems}
+            priorityItems={priorityItems}
             hideOwned={hideOwned}
             marketSlugs={marketSlugs}
-            onToggleOwned={toggleWeapon}
+            onToggleOwned={toggleItem}
             onTogglePriority={togglePriority}
           />
         )}
 
-        <CategorySection
-          id="primary"
-          title="Armes Principales"
-          weapons={filteredPrimary.filter((weapon) => !priorityWeapons.has(weapon))}
-          ownedWeapons={ownedWeapons}
-          priorityWeapons={priorityWeapons}
-          hideOwned={hideOwned}
-          marketSlugs={marketSlugs}
-          onToggleOwned={toggleWeapon}
-          onTogglePriority={togglePriority}
-        />
-
-        <CategorySection
-          id="secondary"
-          title="Armes Secondaires"
-          weapons={filteredSecondary.filter((weapon) => !priorityWeapons.has(weapon))}
-          ownedWeapons={ownedWeapons}
-          priorityWeapons={priorityWeapons}
-          hideOwned={hideOwned}
-          marketSlugs={marketSlugs}
-          onToggleOwned={toggleWeapon}
-          onTogglePriority={togglePriority}
-        />
-
-        <CategorySection
-          id="melee"
-          title="Armes de Mêlée"
-          weapons={filteredMelee.filter((weapon) => !priorityWeapons.has(weapon))}
-          ownedWeapons={ownedWeapons}
-          priorityWeapons={priorityWeapons}
-          hideOwned={hideOwned}
-          marketSlugs={marketSlugs}
-          onToggleOwned={toggleWeapon}
-          onTogglePriority={togglePriority}
-        />
+        {DISPLAY_CATEGORIES.map((category) => (
+          <CategorySection
+            key={category}
+            id={category.toLowerCase()}
+            title={category}
+            category={category}
+            items={filteredByCategory[category].filter((item) => !priorityItems.has(item))}
+            ownedItems={ownedItems}
+            priorityItems={priorityItems}
+            hideOwned={hideOwned}
+            marketSlugs={marketSlugs}
+            onToggleOwned={toggleItem}
+            onTogglePriority={togglePriority}
+          />
+        ))}
       </main>
 
       <img src={voltSkin} alt="Volt Raijin" className="decoration-skin left-skin" />

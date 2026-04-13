@@ -1,9 +1,11 @@
+import { memo } from 'react';
 import platIcon from '../../../assets/PlatinumLarge.webp';
 import wikiIcon from '../../../assets/Wiki.png';
-import { getMarketLinkForWeapon, getWeaponImageUrl, getWikiUrl } from '../utils';
+import { getMarketLinkForItem, getItemImageUrl, getWikiUrl } from '../utils';
 
-type WeaponCardProps = {
-  weapon: string;
+type ItemCardProps = {
+  item: string;
+  category: string;
   isOwned: boolean;
   isPriority: boolean;
   onToggleOwned: () => void;
@@ -11,28 +13,29 @@ type WeaponCardProps = {
   marketSlugs: Set<string>;
 };
 
-export function WeaponCard({
-  weapon,
+export const ItemCard = memo(function ItemCard({
+  item,
+  category,
   isOwned,
   isPriority,
   onToggleOwned,
   onTogglePriority,
   marketSlugs,
-}: WeaponCardProps) {
-  const wikiUrl = getWikiUrl(weapon);
-  const imageUrl = getWeaponImageUrl(weapon);
-  const { marketUrl, isTradeable } = getMarketLinkForWeapon(weapon, marketSlugs);
+}: ItemCardProps) {
+  const wikiUrl = getWikiUrl(item);
+  const imageUrl = getItemImageUrl(item, category);
+  const { marketUrl, isTradeable } = getMarketLinkForItem(item, marketSlugs);
 
   return (
     <div className={`weapon-card ${isOwned ? 'acquired' : ''}`}>
       <div className="weapon-header">
-        <span className="weapon-name">{weapon}</span>
+        <span className="weapon-name">{item}</span>
         <div className="weapon-actions">
           <button
             className={`priority-btn ${isPriority ? 'active' : ''}`}
             onClick={onTogglePriority}
             type="button"
-            title={isPriority ? 'Retirer des priorités' : 'Ajouter aux priorités'}
+            title={isPriority ? 'Remove from priorities' : 'Add to priorities'}
           >
             ★
           </button>
@@ -44,7 +47,7 @@ export function WeaponCard({
       </div>
 
       <div className="weapon-image-container">
-        <img src={imageUrl} alt={weapon} className="weapon-image" loading="lazy" />
+        <img src={imageUrl} alt={item} className="weapon-image" loading="lazy" />
       </div>
 
       <div className="weapon-links">
@@ -64,7 +67,7 @@ export function WeaponCard({
             target="_blank"
             rel="noreferrer"
             className="link-item uncertain"
-            title="Probablement non-achetable. Cliquez pour chercher quand même."
+            title="Probably not tradeable. Click to search anyway."
           >
             Market (?)
           </a>
@@ -72,4 +75,4 @@ export function WeaponCard({
       </div>
     </div>
   );
-}
+});

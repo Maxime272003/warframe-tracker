@@ -1,55 +1,59 @@
-import { WeaponCard } from './WeaponCard';
+import { memo } from 'react';
+import { ItemCard } from './ItemCard';
 
 type CategorySectionProps = {
   id: string;
   title: string;
-  weapons: string[];
-  ownedWeapons: Set<string>;
-  priorityWeapons: Set<string>;
+  category: string;
+  items: string[];
+  ownedItems: Set<string>;
+  priorityItems: Set<string>;
   hideOwned: boolean;
   marketSlugs: Set<string>;
-  onToggleOwned: (weapon: string) => void;
-  onTogglePriority: (weapon: string) => void;
+  onToggleOwned: (item: string) => void;
+  onTogglePriority: (item: string) => void;
 };
 
-export function CategorySection({
+export const CategorySection = memo(function CategorySection({
   id,
   title,
-  weapons,
-  ownedWeapons,
-  priorityWeapons,
+  category,
+  items,
+  ownedItems,
+  priorityItems,
   hideOwned,
   marketSlugs,
   onToggleOwned,
   onTogglePriority,
 }: CategorySectionProps) {
-  const visibleWeapons = weapons
-    .filter((weapon) => !hideOwned || !ownedWeapons.has(weapon))
+  const visibleItems = items
+    .filter((item) => !hideOwned || !ownedItems.has(item))
     .slice()
     .sort((left, right) => left.localeCompare(right));
 
-  const remainingCount = weapons.filter((weapon) => !ownedWeapons.has(weapon)).length;
+  const remainingCount = items.filter((item) => !ownedItems.has(item)).length;
 
   return (
     <section id={id} className="category-section">
       <div className="category-header">
         <h3 className="category-title">
-          {title} ({remainingCount} restantes)
+          {title} ({remainingCount} remaining)
         </h3>
       </div>
 
-      {visibleWeapons.length === 0 ? (
-        <div className="empty-state">Aucune arme trouvée pour ce filtre.</div>
+      {visibleItems.length === 0 ? (
+        <div className="empty-state">No items found for this filter.</div>
       ) : (
         <div className="weapons-grid">
-          {visibleWeapons.map((weapon) => (
-            <WeaponCard
-              key={weapon}
-              weapon={weapon}
-              isOwned={ownedWeapons.has(weapon)}
-              isPriority={priorityWeapons.has(weapon)}
-              onToggleOwned={() => onToggleOwned(weapon)}
-              onTogglePriority={() => onTogglePriority(weapon)}
+          {visibleItems.map((item) => (
+            <ItemCard
+              key={item}
+              item={item}
+              category={category}
+              isOwned={ownedItems.has(item)}
+              isPriority={priorityItems.has(item)}
+              onToggleOwned={() => onToggleOwned(item)}
+              onTogglePriority={() => onTogglePriority(item)}
               marketSlugs={marketSlugs}
             />
           ))}
@@ -57,4 +61,4 @@ export function CategorySection({
       )}
     </section>
   );
-}
+});

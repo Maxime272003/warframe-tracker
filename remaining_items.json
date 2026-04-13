@@ -1,0 +1,76 @@
+{
+  "warframes": [
+    "Excalibur Prime"
+  ],
+  "primary": [
+    "Coda Bubonico",
+    "Coda Hema",
+    "Coda Sporothrix",
+    "Coda Synapse",
+    "Kuva Chakkhurr",
+    "Kuva Drakgoon",
+    "Kuva Hek",
+    "Kuva Hind",
+    "Kuva Kohm",
+    "Kuva Ogris",
+    "Kuva Quartakk",
+    "Kuva Tonkor",
+    "Kuva Zarr",
+    "Simulor",
+    "Tenet Envoy",
+    "Tenet Ferrox",
+    "Tenet Flux Rifle",
+    "Tenet Glaxion",
+    "Tenet Quanta",
+    "Tenet Tetra"
+  ],
+  "secondary": [
+    "Azima",
+    "Brakk",
+    "Coda Catabolyst",
+    "Coda Pox",
+    "Coda Tysis",
+    "Detron",
+    "Dex Furis",
+    "Dual Coda Torxica",
+    "Kompressa",
+    "Kuva Kraken",
+    "Kuva Seer",
+    "Kuva Twin Stubbas",
+    "Lato Prime",
+    "Tenet Cycron",
+    "Tenet Detron",
+    "Tenet Diplos",
+    "Tenet Plinx",
+    "Tenet Spirex"
+  ],
+  "melee": [
+    "Coda Caustacyst",
+    "Coda Hirudo",
+    "Coda Mire",
+    "Coda Motovore",
+    "Heliocor",
+    "Kuva Ghoulsaw",
+    "Machete",
+    "Sibear",
+    "Sigma & Octantis",
+    "Skana Prime",
+    "Tenet Agendus",
+    "Tenet Exec",
+    "Tenet Grigori",
+    "Tenet Livia",
+    "Vitrica",
+    "War"
+  ],
+  "archwings": [
+    "Cortege",
+    "Kuva Ayanga",
+    "Kuva Grattler",
+    "Morgha"
+  ],
+  "companions": [
+    "Bhaira Hound",
+    "Hec Hound",
+    "Vasca Kavat"
+  ]
+}

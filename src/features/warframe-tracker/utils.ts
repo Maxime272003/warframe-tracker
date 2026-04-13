@@ -1,18 +1,46 @@
-import type { WeaponCatalog, WeaponFilter } from './types';
+import type { DisplayCategory, ItemCatalog, ItemFilter } from './types';
+import { EMPTY_ITEM_CATALOG } from './types';
+import { DISPLAY_CATEGORIES } from './constants';
 
-export function isWeaponCatalog(value: unknown): value is WeaponCatalog {
+export function isItemCatalog(value: unknown): value is ItemCatalog {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
 
-  const data = value as WeaponCatalog;
-  return (
-    typeof data.warframe_weapons === 'object' &&
-    data.warframe_weapons !== null &&
-    Array.isArray(data.warframe_weapons.primary) &&
-    Array.isArray(data.warframe_weapons.secondary) &&
-    Array.isArray(data.warframe_weapons.melee)
+  const data = value as Record<string, unknown>;
+  return DISPLAY_CATEGORIES.every(
+    (category) => Array.isArray(data[category]),
   );
+}
+
+export function parseImportJson(value: unknown): ItemCatalog | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const data = value as Record<string, unknown>;
+  const catalog: ItemCatalog = { ...EMPTY_ITEM_CATALOG };
+  const keys: Record<string, DisplayCategory> = {
+    warframes: 'Warframes',
+    primary: 'Primary',
+    secondary: 'Secondary',
+    melee: 'Melee',
+    archwings: 'Archwings',
+    companions: 'Companions',
+  };
+
+  let hasAnyKey = false;
+
+  for (const [jsonKey, displayCategory] of Object.entries(keys)) {
+    if (Array.isArray(data[jsonKey])) {
+      catalog[displayCategory] = (data[jsonKey] as unknown[]).filter(
+        (item): item is string => typeof item === 'string',
+      );
+      hasAnyKey = true;
+    }
+  }
+
+  return hasAnyKey ? catalog : null;
 }
 
 export function parseMarketSlugsText(text: string): string[] {
@@ -68,13 +96,13 @@ export function extractMarketItemUrlNames(payload: unknown): string[] {
     .map((slug) => slug.toLowerCase());
 }
 
-export function getMarketLinkForWeapon(weapon: string, marketSlugs: Set<string>) {
-  const marketCandidates = getMarketSlugCandidates(weapon);
-  const baseSlug = normalizeWeaponNameForMarket(weapon);
+export function getMarketLinkForItem(item: string, marketSlugs: Set<string>) {
+  const marketCandidates = getMarketSlugCandidates(item);
+  const baseSlug = normalizeWeaponNameForMarket(item);
   const matchedSlug = marketCandidates.find((candidate) => marketSlugs.has(candidate)) ?? null;
-  const isKuva = weapon.toLowerCase().includes('kuva');
-  const isTenet = weapon.toLowerCase().includes('tenet');
-  const isCoda = weapon.toLowerCase().includes('coda');
+  const isKuva = item.toLowerCase().includes('kuva');
+  const isTenet = item.toLowerCase().includes('tenet');
+  const isCoda = item.toLowerCase().includes('coda');
 
   if (matchedSlug) {
     return { marketUrl: `https://warframe.market/items/${matchedSlug}?type=sell`, isTradeable: true };
@@ -97,37 +125,50 @@ export function getMarketLinkForWeapon(weapon: string, marketSlugs: Set<string>)
   return { marketUrl: `https://warframe.market/items/${baseSlug}?type=sell`, isTradeable: false };
 }
 
-export function getWikiUrl(weapon: string): string {
-  return `https://wiki.warframe.com/w/${weapon.replace(/ /g, '_')}`;
+export function getWikiUrl(item: string): string {
+  return `https://wiki.warframe.com/w/${item.replace(/ /g, '_')}`;
 }
 
-export function getWeaponImageUrl(weapon: string): string {
-  return `https://wiki.warframe.com/images/${weapon.replace(/ /g, '')}.png`;
+const NO_THUMB_WARFRAMES = new Set(['Bonewidow', 'Voidrig']);
+
+export function getItemImageUrl(item: string, category?: string): string {
+  const name = item.replace(/[\s-]/g, '');
+  if (category === 'Warframes' && !NO_THUMB_WARFRAMES.has(item)) {
+    return `https://wiki.warframe.com/images/${name}_Thumb.png`;
+  }
+  return `https://wiki.warframe.com/images/${name}.png`;
 }
 
-export function filterWeaponNames(weapons: string[], filter: WeaponFilter): string[] {
+export function filterItemNames(items: string[], filter: ItemFilter): string[] {
   if (filter === 'Kuva') {
-    return weapons.filter((weapon) => weapon.toLowerCase().includes('kuva'));
+    return items.filter((item) => item.toLowerCase().includes('kuva'));
   }
 
   if (filter === 'Tenet') {
-    return weapons.filter((weapon) => weapon.toLowerCase().includes('tenet'));
+    return items.filter((item) => item.toLowerCase().includes('tenet'));
   }
 
   if (filter === 'Coda') {
-    return weapons.filter((weapon) => weapon.toLowerCase().includes('coda'));
+    return items.filter((item) => item.toLowerCase().includes('coda'));
+  }
+
+  if (filter === 'Prime') {
+    return items.filter((item) => item.toLowerCase().includes('prime'));
   }
 
   if (filter === 'Standard') {
-    return weapons.filter((weapon) => {
-      const normalized = weapon.toLowerCase();
-      return !normalized.includes('kuva') && !normalized.includes('tenet') && !normalized.includes('coda');
+    return items.filter((item) => {
+      const normalized = item.toLowerCase();
+      return !normalized.includes('kuva')
+        && !normalized.includes('tenet')
+        && !normalized.includes('coda')
+        && !normalized.includes('prime');
     });
   }
 
-  return weapons;
+  return items;
 }
 
-export function getRemainingWeaponCount(weapons: string[], ownedWeapons: Set<string>): number {
-  return weapons.filter((weapon) => !ownedWeapons.has(weapon)).length;
+export function getRemainingItemCount(items: string[], ownedItems: Set<string>): number {
+  return items.filter((item) => !ownedItems.has(item)).length;
 }

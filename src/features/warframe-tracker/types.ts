@@ -1,18 +1,14 @@
-export type WeaponCatalog = {
-  warframe_weapons: {
-    melee: string[];
-    primary: string[];
-    secondary: string[];
-    [key: string]: string[] | undefined;
-  };
-};
+export type DisplayCategory = 'Warframes' | 'Primary' | 'Secondary' | 'Melee' | 'Archwings' | 'Companions';
 
-export type WeaponFilter = 'All' | 'Standard' | 'Kuva' | 'Tenet' | 'Coda';
+export type ItemCatalog = Record<DisplayCategory, string[]>;
 
-export const EMPTY_WEAPON_CATALOG: WeaponCatalog = {
-  warframe_weapons: {
-    primary: [],
-    secondary: [],
-    melee: [],
-  },
+export type ItemFilter = 'All' | 'Standard' | 'Prime' | 'Kuva' | 'Tenet' | 'Coda';
+
+export const EMPTY_ITEM_CATALOG: ItemCatalog = {
+  Warframes: [],
+  Primary: [],
+  Secondary: [],
+  Melee: [],
+  Archwings: [],
+  Companions: [],
 };
