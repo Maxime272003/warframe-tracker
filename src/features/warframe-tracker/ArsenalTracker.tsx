@@ -8,7 +8,7 @@ import type { ItemFilter } from './types';
 import { STORAGE_KEYS, ITEM_FILTER_OPTIONS } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
-import { filterItemNames, getRemainingItemCount, parseImportJson } from './utils';
+import { filterItemNames, getRemainingObtainableItemCount, normalizeCategoryKey, parseImportJson } from './utils';
 import { useMarketSlugs } from './hooks/useMarketSlugs';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useItemsCatalog } from './hooks/useItemsCatalog';
@@ -37,8 +37,10 @@ export default function ArsenalTracker() {
   const [itemsCatalog, isLoading, categories] = useItemsCatalog();
   const [selectedCategory, setSelectedCategory] = usePersistentState<string>(STORAGE_KEYS.selectedCategory, 'All', (raw) => raw, (value) => value);
   const [hideOwned, setHideOwned] = usePersistentState<boolean>(STORAGE_KEYS.hideOwned, false, parseBoolean, serializeBoolean);
+  const [hideUnobtainable, setHideUnobtainable] = usePersistentState<boolean>(STORAGE_KEYS.hideUnobtainable, false, parseBoolean, serializeBoolean);
   const [filter, setFilter] = usePersistentState<ItemFilter>(STORAGE_KEYS.filter, 'All', parseItemFilter, serializeItemFilter);
   const [ownedItems, setOwnedItems] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedItems, new Set<string>(), parseSet, serializeSet);
+  const [unobtainableItems, setUnobtainableItems] = usePersistentState<Set<string>>(STORAGE_KEYS.unobtainableItems, new Set<string>(), parseSet, serializeSet);
   const [priorityItems, setPriorityItems] = usePersistentState<Set<string>>(STORAGE_KEYS.priorityItems, new Set<string>(), parseSet, serializeSet);
   const [searchQuery, setSearchQuery] = useState('');
   const marketSlugs = useMarketSlugs();
@@ -76,7 +78,7 @@ export default function ArsenalTracker() {
         const newOwnedItems = new Set<string>();
         for (const category of categories) {
           const allItemsInCategory = itemsCatalog[category] ?? [];
-          const remainingInCategory = new Set(remainingCatalog[category] ?? []);
+          const remainingInCategory = new Set(remainingCatalog[normalizeCategoryKey(category)] ?? []);
 
           for (const item of allItemsInCategory) {
             if (!remainingInCategory.has(item)) {
@@ -116,6 +118,20 @@ export default function ArsenalTracker() {
     });
   }, [setOwnedItems, setPriorityItems]);
 
+  const toggleUnobtainable = useCallback((item: string) => {
+    setUnobtainableItems((previousUnobtainableItems) => {
+      const nextUnobtainableItems = new Set(previousUnobtainableItems);
+
+      if (nextUnobtainableItems.has(item)) {
+        nextUnobtainableItems.delete(item);
+      } else {
+        nextUnobtainableItems.add(item);
+      }
+
+      return nextUnobtainableItems;
+    });
+  }, [setUnobtainableItems]);
+
   const togglePriority = useCallback((item: string) => {
     setPriorityItems((previousPriorityItems) => {
       const nextPriorityItems = new Set(previousPriorityItems);
@@ -148,18 +164,20 @@ export default function ArsenalTracker() {
   const totalRemaining = useMemo(() => {
     let total = 0;
     for (const category of categories) {
-      total += getRemainingItemCount(filteredByCategory[category] ?? [], ownedItems);
+      total += getRemainingObtainableItemCount(filteredByCategory[category] ?? [], ownedItems, unobtainableItems);
     }
     return total;
-  }, [filteredByCategory, categories, ownedItems]);
+  }, [filteredByCategory, categories, ownedItems, unobtainableItems]);
 
   // Priority items across all categories
   const priorityFiltered = useMemo(() => {
     const allFilteredItems = categories.flatMap((category) => filteredByCategory[category] ?? []);
     return allFilteredItems.filter(
-      (item) => priorityItems.has(item) && (!hideOwned || !ownedItems.has(item)),
+      (item) => priorityItems.has(item)
+        && (!hideOwned || !ownedItems.has(item))
+        && (!hideUnobtainable || !unobtainableItems.has(item)),
     );
-  }, [filteredByCategory, categories, priorityItems, hideOwned, ownedItems]);
+  }, [filteredByCategory, categories, priorityItems, hideOwned, ownedItems, hideUnobtainable, unobtainableItems]);
 
   const exportRemainingJson = useCallback(() => {
     const remaining: Record<string, string[]> = {};
@@ -222,13 +240,20 @@ export default function ArsenalTracker() {
   const categoriesWithStatus = useMemo(() => {
     return categories.map(category => {
       const allItemsInCategory = filteredByCategory[category] ?? [];
-      const unownedItemsInCategory = allItemsInCategory.filter(i => !ownedItems.has(i));
-      
-      const displayedItemsCount = hideOwned 
-        ? unownedItemsInCategory.length 
-        : allItemsInCategory.length;
+      const visibleItemsInCategory = allItemsInCategory.filter((item) => {
+        if (hideOwned && ownedItems.has(item)) {
+          return false;
+        }
 
-      const remainingCount = unownedItemsInCategory.length;
+        if (hideUnobtainable && unobtainableItems.has(item)) {
+          return false;
+        }
+
+        return true;
+      });
+
+      const displayedItemsCount = visibleItemsInCategory.length;
+      const remainingCount = allItemsInCategory.filter((item) => !ownedItems.has(item) && !unobtainableItems.has(item)).length;
       
       return { 
         category, 
@@ -237,34 +262,25 @@ export default function ArsenalTracker() {
         hasMatches: allItemsInCategory.length > 0
       };
     });
-  }, [categories, filteredByCategory, ownedItems, hideOwned]);
+  }, [categories, filteredByCategory, ownedItems, hideOwned, hideUnobtainable, unobtainableItems]);
 
   const visibleCategories = useMemo(() => {
     return categoriesWithStatus
       .filter(status => {
-        // Must have something to show (matching search/filter)
         if (status.displayedItemsCount === 0) return false;
 
-        // Only hide completed categories IF 'Hide owned' is checked
-        if (hideOwned && status.remainingCount === 0) return false;
-
-        // If a specific category is selected, only that one
         if (selectedCategory !== 'All' && status.category !== selectedCategory) return false;
 
         return true;
       })
       .map(status => status.category);
-  }, [categoriesWithStatus, selectedCategory, hideOwned]);
+  }, [categoriesWithStatus, selectedCategory]);
 
   const navCategories = useMemo(() => {
     return categoriesWithStatus
-      .filter(status => {
-        if (status.displayedItemsCount === 0) return false;
-        if (hideOwned && status.remainingCount === 0) return false;
-        return true;
-      })
+      .filter(status => status.displayedItemsCount > 0)
       .map(status => status.category);
-  }, [categoriesWithStatus, hideOwned]);
+  }, [categoriesWithStatus]);
 
   return (
     <div className="app-container">
@@ -329,6 +345,11 @@ export default function ArsenalTracker() {
             <span className="switch-label">Hide owned</span>
             <input checked={hideOwned} onChange={() => setHideOwned((currentValue) => !currentValue)} type="checkbox" />
           </label>
+
+          <label className="switch-container">
+            <span className="switch-label">Hide unobtainable</span>
+            <input checked={hideUnobtainable} onChange={() => setHideUnobtainable((currentValue) => !currentValue)} type="checkbox" />
+          </label>
         </div>
       </div>
 
@@ -351,10 +372,13 @@ export default function ArsenalTracker() {
             items={priorityFiltered}
             ownedItems={ownedItems}
             priorityItems={priorityItems}
+            unobtainableItems={unobtainableItems}
             hideOwned={hideOwned}
+            hideUnobtainable={hideUnobtainable}
             marketSlugs={marketSlugs}
             onToggleOwned={toggleItem}
             onTogglePriority={togglePriority}
+            onToggleUnobtainable={toggleUnobtainable}
           />
         )}
 
@@ -367,10 +391,13 @@ export default function ArsenalTracker() {
             items={(filteredByCategory[category] ?? []).filter((item) => !priorityItems.has(item))}
             ownedItems={ownedItems}
             priorityItems={priorityItems}
+            unobtainableItems={unobtainableItems}
             hideOwned={hideOwned}
+            hideUnobtainable={hideUnobtainable}
             marketSlugs={marketSlugs}
             onToggleOwned={toggleItem}
             onTogglePriority={togglePriority}
+            onToggleUnobtainable={toggleUnobtainable}
           />
         ))}
       </main>

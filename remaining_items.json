@@ -15,6 +15,7 @@
     "Heliocor",
     "Kuva Ghoulsaw",
     "Machete",
+    "Sarofang Prime",
     "Sibear",
     "Sigma & Octantis",
     "Skana Prime",
@@ -50,6 +51,7 @@
     "Kuva Quartakk",
     "Kuva Tonkor",
     "Kuva Zarr",
+    "Perigale Prime",
     "Simulor",
     "Tenet Envoy",
     "Tenet Ferrox",
@@ -80,6 +82,7 @@
   ],
   "sentinels": [],
   "warframes": [
-    "Excalibur Prime"
+    "Excalibur Prime",
+    "Voruna Prime"
   ]
 }

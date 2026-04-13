@@ -1,5 +1,9 @@
 import type { ItemCatalog, ItemFilter } from './types';
 
+export function normalizeCategoryKey(category: string): string {
+  return category.toLowerCase().trim().replace(/[\s-]+/g, '_');
+}
+
 export function parseImportJson(value: unknown): ItemCatalog | null {
   if (typeof value !== 'object' || value === null) {
     return null;
@@ -9,13 +13,36 @@ export function parseImportJson(value: unknown): ItemCatalog | null {
   const catalog: ItemCatalog = {};
   let hasAnyKey = false;
 
-  for (const [key, val] of Object.entries(data)) {
-    if (Array.isArray(val)) {
-      catalog[key] = (val as unknown[]).filter(
-        (item): item is string => typeof item === 'string',
-      );
+  const appendCatalogEntries = (entries: Array<[string, unknown]>) => {
+    for (const [key, val] of entries) {
+      if (!Array.isArray(val)) {
+        continue;
+      }
+
+      const normalizedKey = normalizeCategoryKey(key);
+      const parsedItems = (val as unknown[]).filter((item): item is string => typeof item === 'string');
+      if (!catalog[normalizedKey]) {
+        catalog[normalizedKey] = [];
+      }
+
+      catalog[normalizedKey].push(...parsedItems);
       hasAnyKey = true;
     }
+  };
+
+  appendCatalogEntries(Object.entries(data));
+
+  const nestedCatalog = data.warframe_weapons;
+  if (typeof nestedCatalog === 'object' && nestedCatalog !== null) {
+    appendCatalogEntries(Object.entries(nestedCatalog as Record<string, unknown>));
+  }
+
+  for (const category of Object.keys(catalog)) {
+    if (catalog[category].length === 0) {
+      continue;
+    }
+
+    catalog[category] = Array.from(new Set(catalog[category])).sort((left, right) => left.localeCompare(right));
   }
 
   return hasAnyKey ? catalog : null;
@@ -149,4 +176,12 @@ export function filterItemNames(items: string[], filter: ItemFilter): string[] {
 
 export function getRemainingItemCount(items: string[], ownedItems: Set<string>): number {
   return items.filter((item) => !ownedItems.has(item)).length;
+}
+
+export function getRemainingObtainableItemCount(
+  items: string[],
+  ownedItems: Set<string>,
+  unobtainableItems: Set<string>,
+): number {
+  return items.filter((item) => !ownedItems.has(item) && !unobtainableItems.has(item)).length;
 }

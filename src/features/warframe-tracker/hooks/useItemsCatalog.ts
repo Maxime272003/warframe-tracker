@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { EXCLUDED_ITEMS, ITEMS_CATALOG_CACHE_TTL_MS, STORAGE_KEYS } from '../constants';
-import type { ItemCatalog } from '../types';
+import type { ItemCatalog, ManualCatalogItem } from '../types';
 
 type ApiItem = {
   name?: string;
   category?: string;
   masterable?: boolean;
 };
+
+type ManualItemsPayload = ManualCatalogItem[] | { items?: ManualCatalogItem[] };
 
 function readCachedCatalog(): ItemCatalog | null {
   try {
@@ -63,6 +65,55 @@ function buildCatalogFromApiData(data: ApiItem[]): ItemCatalog {
   return catalog;
 }
 
+function buildCatalogFromManualData(payload: ManualItemsPayload): ItemCatalog {
+  const items = Array.isArray(payload) ? payload : payload.items ?? [];
+  const catalog: ItemCatalog = {};
+
+  for (const item of items) {
+    if (!item.category || !item.name) {
+      continue;
+    }
+
+    const category = item.category.trim();
+    const cleanName = item.name.replace(/<[^>]+>\s*/g, '').trim();
+
+    if (!category || !cleanName || EXCLUDED_ITEMS.has(cleanName)) {
+      continue;
+    }
+
+    if (!catalog[category]) {
+      catalog[category] = [];
+    }
+
+    catalog[category].push(cleanName);
+  }
+
+  for (const category of Object.keys(catalog)) {
+    catalog[category] = Array.from(new Set(catalog[category])).sort((left, right) => left.localeCompare(right));
+  }
+
+  return catalog;
+}
+
+function mergeCatalogs(baseCatalog: ItemCatalog, extraCatalog: ItemCatalog): ItemCatalog {
+  const merged: ItemCatalog = {};
+
+  for (const [category, items] of Object.entries(baseCatalog)) {
+    merged[category] = [...items];
+  }
+
+  for (const [category, items] of Object.entries(extraCatalog)) {
+    if (!merged[category]) {
+      merged[category] = [];
+    }
+
+    merged[category].push(...items);
+    merged[category] = Array.from(new Set(merged[category])).sort((left, right) => left.localeCompare(right));
+  }
+
+  return merged;
+}
+
 export function useItemsCatalog(): [ItemCatalog, boolean, string[]] {
   const [catalog, setCatalog] = useState<ItemCatalog>(() => {
     return readCachedCatalog() ?? {};
@@ -70,33 +121,39 @@ export function useItemsCatalog(): [ItemCatalog, boolean, string[]] {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const cached = readCachedCatalog();
-    if (cached) {
+    const controller = new AbortController();
+    const cached = readCachedCatalog() ?? {};
+    if (Object.keys(cached).length > 0) {
       setCatalog(cached);
-      setIsLoading(false);
-      return;
     }
 
-    const controller = new AbortController();
-
-    const fetchItems = async () => {
+    const fetchCatalog = async () => {
       try {
-        const response = await fetch('https://api.warframestat.us/items', {
-          signal: controller.signal,
-          headers: { 'Accept-Language': 'en' },
-        });
+        const [apiResult, manualResult] = await Promise.allSettled([
+          fetch('https://api.warframestat.us/items', {
+            signal: controller.signal,
+            headers: { 'Accept-Language': 'en' },
+          }),
+          fetch('/manual-items.json', {
+            signal: controller.signal,
+          }),
+        ]);
 
-        if (!response.ok) {
-          setIsLoading(false);
-          return;
+        let apiCatalog = cached;
+        if (apiResult.status === 'fulfilled' && apiResult.value.ok) {
+          const data = (await apiResult.value.json()) as ApiItem[];
+          apiCatalog = buildCatalogFromApiData(data);
+          localStorage.setItem(STORAGE_KEYS.itemsCatalog, JSON.stringify(apiCatalog));
+          localStorage.setItem(STORAGE_KEYS.itemsCatalogTimestamp, String(Date.now()));
         }
 
-        const data = (await response.json()) as ApiItem[];
-        const newCatalog = buildCatalogFromApiData(data);
+        let manualCatalog: ItemCatalog = {};
+        if (manualResult.status === 'fulfilled' && manualResult.value.ok) {
+          const manualData = (await manualResult.value.json()) as ManualItemsPayload;
+          manualCatalog = buildCatalogFromManualData(manualData);
+        }
 
-        setCatalog(newCatalog);
-        localStorage.setItem(STORAGE_KEYS.itemsCatalog, JSON.stringify(newCatalog));
-        localStorage.setItem(STORAGE_KEYS.itemsCatalogTimestamp, String(Date.now()));
+        setCatalog(mergeCatalogs(apiCatalog, manualCatalog));
       } catch {
         // API unavailable — use whatever we have (empty or stale cache)
       } finally {
@@ -104,7 +161,7 @@ export function useItemsCatalog(): [ItemCatalog, boolean, string[]] {
       }
     };
 
-    void fetchItems();
+    void fetchCatalog();
 
     return () => controller.abort();
   }, []);

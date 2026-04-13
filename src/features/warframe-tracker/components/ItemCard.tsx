@@ -8,8 +8,10 @@ type ItemCardProps = {
   category: string;
   isOwned: boolean;
   isPriority: boolean;
+  isUnobtainable: boolean;
   onToggleOwned: () => void;
   onTogglePriority: () => void;
+  onToggleUnobtainable: () => void;
   marketSlugs: Set<string>;
 };
 
@@ -18,8 +20,10 @@ export const ItemCard = memo(function ItemCard({
   category,
   isOwned,
   isPriority,
+  isUnobtainable,
   onToggleOwned,
   onTogglePriority,
+  onToggleUnobtainable,
   marketSlugs,
 }: ItemCardProps) {
   const wikiUrl = getWikiUrl(item);
@@ -27,7 +31,7 @@ export const ItemCard = memo(function ItemCard({
   const { marketUrl, isTradeable } = getMarketLinkForItem(item, marketSlugs);
 
   return (
-    <div className={`weapon-card ${isOwned ? 'acquired' : ''}`}>
+    <div className={`weapon-card ${isOwned ? 'acquired' : ''} ${isUnobtainable ? 'unobtainable' : ''}`}>
       <div className="weapon-header">
         <span className="weapon-name">{item}</span>
         <div className="weapon-actions">
@@ -38,6 +42,15 @@ export const ItemCard = memo(function ItemCard({
             title={isPriority ? 'Remove from priorities' : 'Add to priorities'}
           >
             ★
+          </button>
+          <button
+            className={`unobtainable-btn ${isUnobtainable ? 'active' : ''}`}
+            onClick={onToggleUnobtainable}
+            type="button"
+            title={isUnobtainable ? 'Mark as obtainable' : 'Mark as unobtainable'}
+            aria-label={isUnobtainable ? 'Mark as obtainable' : 'Mark as unobtainable'}
+          >
+            ⦸
           </button>
           <label className="checkbox-container">
             <input type="checkbox" onChange={onToggleOwned} checked={isOwned} />

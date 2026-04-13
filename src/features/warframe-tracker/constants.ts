@@ -1,11 +1,13 @@
 import localMarketSlugsText from '../../../api_doc/warframe_market_slugs.txt?raw';
 
 export const STORAGE_KEYS = {
-  itemsCatalog: 'wf_items_catalog_v7',
-  itemsCatalogTimestamp: 'wf_items_catalog_ts_v7',
+  itemsCatalog: 'wf_items_catalog_v8',
+  itemsCatalogTimestamp: 'wf_items_catalog_ts_v8',
   hideOwned: 'wf_hide_owned_v1',
+  hideUnobtainable: 'wf_hide_unobtainable_v1',
   filter: 'wf_item_filter_v1',
   ownedItems: 'wf_owned_items_v1',
+  unobtainableItems: 'wf_unobtainable_items_v1',
   priorityItems: 'wf_priority_items_v1',
   selectedCategory: 'wf_selected_category_v1',
   marketSlugs: 'wf_market_slugs_cache_v1',

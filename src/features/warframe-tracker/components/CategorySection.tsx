@@ -8,10 +8,13 @@ type CategorySectionProps = {
   items: string[];
   ownedItems: Set<string>;
   priorityItems: Set<string>;
+  unobtainableItems: Set<string>;
   hideOwned: boolean;
+  hideUnobtainable: boolean;
   marketSlugs: Set<string>;
   onToggleOwned: (item: string) => void;
   onTogglePriority: (item: string) => void;
+  onToggleUnobtainable: (item: string) => void;
 };
 
 export const CategorySection = memo(function CategorySection({
@@ -21,17 +24,20 @@ export const CategorySection = memo(function CategorySection({
   items,
   ownedItems,
   priorityItems,
+  unobtainableItems,
   hideOwned,
+  hideUnobtainable,
   marketSlugs,
   onToggleOwned,
   onTogglePriority,
+  onToggleUnobtainable,
 }: CategorySectionProps) {
   const visibleItems = items
-    .filter((item) => !hideOwned || !ownedItems.has(item))
+    .filter((item) => (!hideOwned || !ownedItems.has(item)) && (!hideUnobtainable || !unobtainableItems.has(item)))
     .slice()
     .sort((left, right) => left.localeCompare(right));
 
-  const remainingCount = items.filter((item) => !ownedItems.has(item)).length;
+  const remainingCount = items.filter((item) => !ownedItems.has(item) && !unobtainableItems.has(item)).length;
 
   return (
     <section id={id} className="category-section">
@@ -52,8 +58,10 @@ export const CategorySection = memo(function CategorySection({
               category={category}
               isOwned={ownedItems.has(item)}
               isPriority={priorityItems.has(item)}
+              isUnobtainable={unobtainableItems.has(item)}
               onToggleOwned={() => onToggleOwned(item)}
               onTogglePriority={() => onTogglePriority(item)}
+              onToggleUnobtainable={() => onToggleUnobtainable(item)}
               marketSlugs={marketSlugs}
             />
           ))}
