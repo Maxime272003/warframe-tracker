@@ -19,7 +19,7 @@ export function ScrollToTopButton() {
   }
 
   return (
-    <button className="scroll-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} type="button" title="Remonter en haut">
+    <button className="scroll-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} type="button" title="Scroll to top">
       ↑
     </button>
   );

@@ -38,6 +38,7 @@ export default function ArsenalTracker() {
   const [selectedCategory, setSelectedCategory] = usePersistentState<string>(STORAGE_KEYS.selectedCategory, 'All', (raw) => raw, (value) => value);
   const [hideOwned, setHideOwned] = usePersistentState<boolean>(STORAGE_KEYS.hideOwned, false, parseBoolean, serializeBoolean);
   const [hideUnobtainable, setHideUnobtainable] = usePersistentState<boolean>(STORAGE_KEYS.hideUnobtainable, false, parseBoolean, serializeBoolean);
+  const [showFiltersBar, setShowFiltersBar] = usePersistentState<boolean>(STORAGE_KEYS.showFiltersBar, true, parseBoolean, serializeBoolean);
   const [filter, setFilter] = usePersistentState<ItemFilter>(STORAGE_KEYS.filter, 'All', parseItemFilter, serializeItemFilter);
   const [ownedItems, setOwnedItems] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedItems, new Set<string>(), parseSet, serializeSet);
   const [unobtainableItems, setUnobtainableItems] = usePersistentState<Set<string>>(STORAGE_KEYS.unobtainableItems, new Set<string>(), parseSet, serializeSet);
@@ -45,7 +46,9 @@ export default function ArsenalTracker() {
   const [searchQuery, setSearchQuery] = useState('');
   const marketSlugs = useMarketSlugs();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const transitionTimeoutRef = useRef<number | null>(null);
   const [particlesReady, setParticlesReady] = useState(false);
+  const [isUiTransitioning, setIsUiTransitioning] = useState(false);
 
   useEffect(() => {
     void initParticlesEngine(async (engine: Engine) => {
@@ -55,6 +58,26 @@ export default function ArsenalTracker() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerUiTransition = useCallback(() => {
+    setIsUiTransitioning(true);
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+    }
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setIsUiTransitioning(false);
+      transitionTimeoutRef.current = null;
+    }, 320);
   }, []);
 
   const handleFileUpload = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -146,6 +169,26 @@ export default function ArsenalTracker() {
     });
   }, [setPriorityItems]);
 
+  const handleCategorySelect = useCallback((category: string) => {
+    triggerUiTransition();
+    setSelectedCategory(category);
+  }, [setSelectedCategory, triggerUiTransition]);
+
+  const handleFilterChange = useCallback((nextFilter: ItemFilter) => {
+    triggerUiTransition();
+    setFilter(nextFilter);
+  }, [setFilter, triggerUiTransition]);
+
+  const handleToggleHideOwned = useCallback(() => {
+    triggerUiTransition();
+    setHideOwned((currentValue) => !currentValue);
+  }, [setHideOwned, triggerUiTransition]);
+
+  const handleToggleHideUnobtainable = useCallback(() => {
+    triggerUiTransition();
+    setHideUnobtainable((currentValue) => !currentValue);
+  }, [setHideUnobtainable, triggerUiTransition]);
+
   // Memoize filtered items per category
   const searchLower = searchQuery.toLowerCase().trim();
 
@@ -196,46 +239,18 @@ export default function ArsenalTracker() {
     URL.revokeObjectURL(url);
   }, [itemsCatalog, categories, ownedItems]);
 
-  const particlesOptions = useMemo(() => ({
-    fullScreen: { enable: true, zIndex: -1 },
-    background: { color: { value: 'transparent' } },
-    fpsLimit: 60,
-    interactivity: {
-      events: { onHover: { enable: true, mode: 'grab' as const } },
-      modes: {
-        grab: {
-          distance: 200,
-          links: { opacity: 0.5, color: '#e2c076' },
-        },
-      },
-    },
-    particles: {
-      color: { value: '#e2c076' },
-      links: {
-        color: '#e2c076',
-        distance: 150,
-        enable: true,
-        opacity: 0.2,
-        width: 1,
-      },
-      move: {
-        direction: 'none' as const,
-        enable: true,
-        outModes: { default: 'bounce' as const },
-        random: true,
-        speed: 1,
-        straight: false,
-      },
-      number: {
-        density: { enable: true, width: 800 },
-        value: 80,
-      },
-      opacity: { value: 0.3 },
-      shape: { type: 'circle' },
-      size: { value: { min: 1, max: 3 } },
-    },
-    detectRetina: true,
-  }), []);
+  const shouldRenderPriorities = useMemo(() => {
+    if (priorityFiltered.length === 0) {
+      return false;
+    }
+
+    if (selectedCategory === 'All') {
+      return true;
+    }
+
+    const selectedItems = filteredByCategory[selectedCategory] ?? [];
+    return priorityFiltered.some((item) => selectedItems.includes(item));
+  }, [priorityFiltered, selectedCategory, filteredByCategory]);
 
   const categoriesWithStatus = useMemo(() => {
     return categories.map(category => {
@@ -282,6 +297,80 @@ export default function ArsenalTracker() {
       .map(status => status.category);
   }, [categoriesWithStatus]);
 
+  const displayedCategoryItemsCount = useMemo(() => {
+    return visibleCategories.reduce((total, category) => {
+      const visibleItems = (filteredByCategory[category] ?? [])
+        .filter((item) => !priorityItems.has(item))
+        .filter((item) => (!hideOwned || !ownedItems.has(item)) && (!hideUnobtainable || !unobtainableItems.has(item)));
+
+      return total + visibleItems.length;
+    }, 0);
+  }, [visibleCategories, filteredByCategory, priorityItems, hideOwned, ownedItems, hideUnobtainable, unobtainableItems]);
+
+  const totalDisplayedCards = displayedCategoryItemsCount + (shouldRenderPriorities ? priorityFiltered.length : 0);
+  const isHeavyRenderMode = totalDisplayedCards > 180;
+
+  const particlesOptions = useMemo(() => ({
+    fullScreen: { enable: true, zIndex: -1 },
+    background: { color: { value: 'transparent' } },
+    fpsLimit: isHeavyRenderMode ? 45 : 90,
+    interactivity: {
+      events: {
+        onHover: { enable: !isHeavyRenderMode, mode: 'repulse' as const },
+        onClick: { enable: !isHeavyRenderMode, mode: 'push' as const },
+      },
+      modes: {
+        repulse: {
+          distance: 90,
+          duration: 0.4,
+        },
+        push: { quantity: 2 },
+      },
+    },
+    particles: {
+      color: { value: ['#e2c076', '#9cc7ff', '#ffffff'] },
+      links: {
+        color: '#e2c076',
+        distance: 150,
+        enable: false,
+        opacity: 0.15,
+        width: 1,
+      },
+      move: {
+        direction: 'none' as const,
+        enable: true,
+        outModes: { default: 'out' as const },
+        random: true,
+        speed: 0.45,
+        straight: false,
+      },
+      number: {
+        density: { enable: true, width: 1200 },
+        value: isHeavyRenderMode ? 20 : 55,
+      },
+      opacity: {
+        value: { min: 0.08, max: isHeavyRenderMode ? 0.22 : 0.35 },
+        animation: {
+          enable: !isHeavyRenderMode,
+          speed: 0.5,
+          sync: false,
+        },
+      },
+      shape: { type: ['circle', 'triangle'] },
+      size: {
+        value: { min: 1, max: 3 },
+        animation: {
+          enable: !isHeavyRenderMode,
+          speed: 1,
+          sync: false,
+        },
+      },
+    },
+    detectRetina: true,
+  }), [isHeavyRenderMode]);
+
+  const shouldShowSkeletons = isLoading || isUiTransitioning;
+
   return (
     <div className="app-container">
       {particlesReady && (
@@ -303,11 +392,32 @@ export default function ArsenalTracker() {
         <input accept=".json" className="file-input" onChange={handleFileUpload} ref={fileInputRef} type="file" />
       </div>
 
+      <button
+        className="filters-toggle-btn sticky-controls-toggle"
+        type="button"
+        onClick={() => setShowFiltersBar((current) => !current)}
+        title={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
+        aria-label={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
+      >
+        {showFiltersBar ? (
+          <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          </svg>
+        )}
+      </button>
+
+      {showFiltersBar && (
       <div className="controls">
         <div className="top-nav">
           <button 
             className={`nav-link ${selectedCategory === 'All' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('All')}
+            onClick={() => handleCategorySelect('All')}
           >
             All
           </button>
@@ -315,7 +425,7 @@ export default function ArsenalTracker() {
             <button 
               key={category} 
               className={`nav-link ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => handleCategorySelect(category)}
             >
               {category}
             </button>
@@ -335,7 +445,7 @@ export default function ArsenalTracker() {
             onChange={(event) => setSearchQuery(event.target.value)}
           />
 
-          <select className="filter-select" value={filter} onChange={(event) => setFilter(event.target.value as ItemFilter)}>
+          <select className="filter-select" value={filter} onChange={(event) => handleFilterChange(event.target.value as ItemFilter)}>
             {ITEM_FILTER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
@@ -343,28 +453,19 @@ export default function ArsenalTracker() {
 
           <label className="switch-container">
             <span className="switch-label">Hide owned</span>
-            <input checked={hideOwned} onChange={() => setHideOwned((currentValue) => !currentValue)} type="checkbox" />
+            <input checked={hideOwned} onChange={handleToggleHideOwned} type="checkbox" />
           </label>
 
           <label className="switch-container">
             <span className="switch-label">Hide unobtainable</span>
-            <input checked={hideUnobtainable} onChange={() => setHideUnobtainable((currentValue) => !currentValue)} type="checkbox" />
+            <input checked={hideUnobtainable} onChange={handleToggleHideUnobtainable} type="checkbox" />
           </label>
         </div>
       </div>
-
-      {isLoading && (
-        <div className="loading-state">
-          <div className="loading-spinner" />
-          <p>Fetching items from Warframe API...</p>
-        </div>
       )}
 
       <main>
-        {priorityFiltered.length > 0 && (selectedCategory === 'All' || priorityFiltered.some(item => {
-           // We can check if any filtered items in the selected category are priorities
-           return visibleCategories.some(cat => (selectedCategory === 'All' || cat === selectedCategory) && filteredByCategory[cat]?.some(i => i === item));
-        })) && (
+        {shouldRenderPriorities && (
           <CategorySection
             id="priorities"
             title="Priorities"
@@ -375,6 +476,8 @@ export default function ArsenalTracker() {
             unobtainableItems={unobtainableItems}
             hideOwned={hideOwned}
             hideUnobtainable={hideUnobtainable}
+            showSkeleton={shouldShowSkeletons}
+            animateOnReveal={!shouldShowSkeletons}
             marketSlugs={marketSlugs}
             onToggleOwned={toggleItem}
             onTogglePriority={togglePriority}
@@ -394,12 +497,34 @@ export default function ArsenalTracker() {
             unobtainableItems={unobtainableItems}
             hideOwned={hideOwned}
             hideUnobtainable={hideUnobtainable}
+            showSkeleton={shouldShowSkeletons}
+            animateOnReveal={!shouldShowSkeletons}
             marketSlugs={marketSlugs}
             onToggleOwned={toggleItem}
             onTogglePriority={togglePriority}
             onToggleUnobtainable={toggleUnobtainable}
           />
         ))}
+
+        {shouldShowSkeletons && visibleCategories.length === 0 && (
+          <CategorySection
+            id="skeleton_fallback"
+            title="Loading"
+            category="Loading"
+            items={[]}
+            ownedItems={ownedItems}
+            priorityItems={priorityItems}
+            unobtainableItems={unobtainableItems}
+            hideOwned={hideOwned}
+            hideUnobtainable={hideUnobtainable}
+            showSkeleton
+            animateOnReveal={false}
+            marketSlugs={marketSlugs}
+            onToggleOwned={toggleItem}
+            onTogglePriority={togglePriority}
+            onToggleUnobtainable={toggleUnobtainable}
+          />
+        )}
       </main>
 
       <img src={voltSkin} alt="Volt Raijin" className="decoration-skin left-skin" />

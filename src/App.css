@@ -167,6 +167,45 @@
   flex-wrap: wrap;
 }
 
+.filters-toggle-btn {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 192, 118, 0.45);
+  background: rgba(12, 18, 27, 0.85);
+  color: var(--wf-accent-gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(226, 192, 118, 0.25);
+  transition: all 0.2s ease;
+}
+
+.filters-toggle-btn:hover {
+  border-color: var(--wf-accent-gold);
+  box-shadow: 0 0 12px var(--wf-accent-glow);
+  transform: translateY(-1px);
+}
+
+.filters-toggle-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.sticky-controls-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 90;
+}
+
+@media (max-width: 768px) {
+  .sticky-controls-toggle {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
 .file-input {
   display: none;
 }
@@ -179,6 +218,39 @@
 
 .category-section {
   margin-bottom: 4rem;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 900px;
+}
+
+.category-content.smooth-reveal {
+  animation: contentReveal 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.item-enter {
+  animation: cardReveal 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--enter-index) * 18ms);
+}
+
+@keyframes contentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .category-title {
@@ -250,6 +322,9 @@
   overflow: hidden;
   box-shadow: 0 4px 6px var(--wf-card-shadow);
   backdrop-filter: blur(5px);
+  content-visibility: auto;
+  contain-intrinsic-size: 300px 280px;
+  contain: layout style paint;
 }
 
 
@@ -414,6 +489,67 @@
 
 .weapon-card.acquired .weapon-image {
   filter: grayscale(100%) opacity(0.7);
+}
+
+.skeleton-title::before,
+.skeleton-title::after {
+  display: none;
+}
+
+.skeleton-card {
+  pointer-events: none;
+  min-height: 250px;
+  opacity: 0.82;
+  animation: skeletonSoftPulse 1.1s ease-in-out infinite;
+}
+
+.skeleton-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.skeleton-image {
+  width: 100%;
+  height: 100px;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.skeleton-card-links {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.skeleton-link {
+  height: 32px;
+  border-radius: 4px;
+}
+
+.skeleton-card .skeleton-text,
+.skeleton-card .skeleton-block {
+  opacity: 0.72;
+}
+
+@keyframes skeletonSoftPulse {
+  0% {
+    opacity: 0.74;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.74;
+  }
 }
 
 /* Custom Checkbox */

@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   itemsCatalogTimestamp: 'wf_items_catalog_ts_v8',
   hideOwned: 'wf_hide_owned_v1',
   hideUnobtainable: 'wf_hide_unobtainable_v1',
+  showFiltersBar: 'wf_show_filters_bar_v1',
   filter: 'wf_item_filter_v1',
   ownedItems: 'wf_owned_items_v1',
   unobtainableItems: 'wf_unobtainable_items_v1',
