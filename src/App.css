@@ -795,7 +795,6 @@
   bottom: 0;
   z-index: 15;
   width: 340px;
-  max-height: 70vh;
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, rgba(12, 18, 27, 0.94) 0%, rgba(21, 28, 39, 0.92) 100%);
@@ -809,6 +808,8 @@
 
 .world-panel-left {
   left: 10px;
+  max-height: 70vh;
+  overflow: hidden;
 }
 
 .world-panel-right {
@@ -1091,9 +1092,7 @@
 /* Fissures List */
 .fissures-list {
   padding: 0.5rem 0.7rem;
-  overflow-y: auto;
   flex: 1;
-  max-height: calc(70vh - 50px);
 }
 
 .fissure-row {
