@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import type { Engine } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
-import voltSkin from '../../assets/VoltRaijinSkin.png';
-import revenantSkin from '../../assets/RevenantMephistoSkin.png';
 import type { ItemFilter } from './types';
 import { STORAGE_KEYS, ITEM_FILTER_OPTIONS } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
+import { WorldStatePanel } from './components/WorldStatePanel';
+import { FissuresPanel } from './components/FissuresPanel';
 import { filterItemNames, getRemainingObtainableItemCount, normalizeCategoryKey, parseImportJson } from './utils';
 import { useMarketSlugs } from './hooks/useMarketSlugs';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useItemsCatalog } from './hooks/useItemsCatalog';
+import { useWorldState } from './hooks/useWorldState';
 
 const parseBoolean = (raw: string): boolean => raw === 'true';
 const serializeBoolean = (value: boolean): string => String(value);
@@ -45,6 +46,7 @@ export default function ArsenalTracker() {
   const [priorityItems, setPriorityItems] = usePersistentState<Set<string>>(STORAGE_KEYS.priorityItems, new Set<string>(), parseSet, serializeSet);
   const [searchQuery, setSearchQuery] = useState('');
   const marketSlugs = useMarketSlugs();
+  const { worldState, isLoading: isWorldStateLoading, refresh: refreshWorldState } = useWorldState();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const [particlesReady, setParticlesReady] = useState(false);
@@ -527,8 +529,21 @@ export default function ArsenalTracker() {
         )}
       </main>
 
-      <img src={voltSkin} alt="Volt Raijin" className="decoration-skin left-skin" />
-      <img src={revenantSkin} alt="Revenant Mephisto" className="decoration-skin right-skin" />
+      {showFiltersBar && (
+        <>
+          <WorldStatePanel
+            cycles={worldState.cycles}
+            voidTrader={worldState.voidTrader}
+            isLoading={isWorldStateLoading}
+            onRefresh={refreshWorldState}
+          />
+
+          <FissuresPanel
+            fissures={worldState.fissures}
+            isLoading={isWorldStateLoading}
+          />
+        </>
+      )}
 
       <ScrollToTopButton />
     </div>
