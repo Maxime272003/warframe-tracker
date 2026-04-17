@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   lichSolverStateId: 'wf_lich_solver_state_v1',
   lichSolverAttemptCount: 'wf_lich_attempt_count_v1',
   lichSolverHistory: 'wf_lich_history_v1',
+  lichHuntTimer: 'wf_lich_hunt_timer_v1',
 } as const;
 
 export const MARKET_SLUG_CACHE_TTL_MS = 1000 * 60 * 60 * 12;

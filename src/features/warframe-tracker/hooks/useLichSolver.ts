@@ -13,6 +13,20 @@ import { usePersistentState } from './usePersistentState';
 const DEFAULT_DISCOVERED_MURMUR_SLOTS: DiscoveredMurmurSlots = [null, null, null];
 const MAX_HISTORY_ENTRIES = 40;
 
+type HuntTimerState = {
+  elapsedMs: number;
+  isRunning: boolean;
+  startedAtMs: number | null;
+  hasStarted: boolean;
+};
+
+const DEFAULT_HUNT_TIMER_STATE: HuntTimerState = {
+  elapsedMs: 0,
+  isRunning: false,
+  startedAtMs: null,
+  hasStarted: false,
+};
+
 const KNOWN_REQUIEM_MOD_IDS: RequiemModId[] = ['fass', 'khra', 'jahu', 'netra', 'lohk', 'ris', 'vome', 'xata', 'oull'];
 
 const KNOWN_SOLVER_STATES: LichSolverStateId[] = [
@@ -348,6 +362,32 @@ function serializeHistory(value: LichDecisionLog[]): string {
   return JSON.stringify(value.slice(-MAX_HISTORY_ENTRIES));
 }
 
+function parseHuntTimerState(raw: string): HuntTimerState {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== 'object' || parsed === null) {
+      return { ...DEFAULT_HUNT_TIMER_STATE };
+    }
+
+    const record = parsed as Record<string, unknown>;
+    const elapsedMs = Number(record.elapsedMs);
+    const startedAtMs = record.startedAtMs === null ? null : Number(record.startedAtMs);
+
+    return {
+      elapsedMs: Number.isFinite(elapsedMs) && elapsedMs >= 0 ? Math.floor(elapsedMs) : 0,
+      isRunning: record.isRunning === true,
+      startedAtMs: startedAtMs !== null && Number.isFinite(startedAtMs) ? Math.floor(startedAtMs) : null,
+      hasStarted: record.hasStarted === true,
+    };
+  } catch {
+    return { ...DEFAULT_HUNT_TIMER_STATE };
+  }
+}
+
+function serializeHuntTimerState(value: HuntTimerState): string {
+  return JSON.stringify(value);
+}
+
 export type ResolvedConfigurationSlot = {
   symbol: RequiemSymbol;
   label: string;
@@ -443,6 +483,12 @@ export function useLichSolver() {
     parseHistory,
     serializeHistory,
   );
+  const [huntTimer, setHuntTimer] = usePersistentState<HuntTimerState>(
+    STORAGE_KEYS.lichHuntTimer,
+    { ...DEFAULT_HUNT_TIMER_STATE },
+    parseHuntTimerState,
+    serializeHuntTimerState,
+  );
   const [notice, setNotice] = useState<string | null>(null);
 
   const stateDefinition = STATE_DEFINITIONS[stateId];
@@ -452,6 +498,26 @@ export function useLichSolver() {
       setStateId('ORR');
     }
   }, [discoveredSlots, setStateId, stateId]);
+
+  useEffect(() => {
+    if (stateId !== 'SOLVED') {
+      return;
+    }
+
+    setHuntTimer((previous) => {
+      if (!previous.isRunning || previous.startedAtMs === null) {
+        return previous;
+      }
+
+      const now = Date.now();
+      return {
+        ...previous,
+        elapsedMs: previous.elapsedMs + Math.max(0, now - previous.startedAtMs),
+        isRunning: false,
+        startedAtMs: null,
+      };
+    });
+  }, [setHuntTimer, stateId]);
 
   const configurationSlots = useMemo(() => {
     if (!stateDefinition.configuration) {
@@ -522,8 +588,54 @@ export function useLichSolver() {
     setStateId('ORR');
     setAttemptCount(0);
     setHistory([]);
+    setHuntTimer({ ...DEFAULT_HUNT_TIMER_STATE });
     setNotice(null);
-  }, [setAttemptCount, setDiscoveredSlots, setHistory, setStateId]);
+  }, [setAttemptCount, setDiscoveredSlots, setHistory, setHuntTimer, setStateId]);
+
+  const startHuntTimer = useCallback(() => {
+    setHuntTimer((previous) => {
+      if (previous.hasStarted || stateId === 'SOLVED') {
+        return previous;
+      }
+
+      return {
+        elapsedMs: 0,
+        isRunning: true,
+        startedAtMs: Date.now(),
+        hasStarted: true,
+      };
+    });
+  }, [setHuntTimer, stateId]);
+
+  const pauseHuntTimer = useCallback(() => {
+    setHuntTimer((previous) => {
+      if (!previous.isRunning || previous.startedAtMs === null) {
+        return previous;
+      }
+
+      const now = Date.now();
+      return {
+        ...previous,
+        elapsedMs: previous.elapsedMs + Math.max(0, now - previous.startedAtMs),
+        isRunning: false,
+        startedAtMs: null,
+      };
+    });
+  }, [setHuntTimer]);
+
+  const resumeHuntTimer = useCallback(() => {
+    setHuntTimer((previous) => {
+      if (!previous.hasStarted || previous.isRunning || stateId === 'SOLVED') {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        isRunning: true,
+        startedAtMs: Date.now(),
+      };
+    });
+  }, [setHuntTimer, stateId]);
 
   const undoLastFeedback = useCallback((): boolean => {
     if (history.length === 0) {
@@ -594,6 +706,7 @@ export function useLichSolver() {
     attemptCount,
     history,
     canUndo: history.length > 0,
+    huntTimer,
     notice,
     setNotice,
     assignDiscoveredSlot,
@@ -603,5 +716,8 @@ export function useLichSolver() {
     resetMachine,
     clearAll,
     undoLastFeedback,
+    startHuntTimer,
+    pauseHuntTimer,
+    resumeHuntTimer,
   };
 }

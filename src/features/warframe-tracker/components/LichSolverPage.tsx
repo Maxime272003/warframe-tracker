@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import FassMod from '../../../assets/FassMod.webp';
 import JahuMod from '../../../assets/JahuMod.webp';
 import KhraMod from '../../../assets/KhraMod.webp';
@@ -103,6 +103,18 @@ function getFeedbackButtonClass(style: 'neutral' | 'success' | 'danger'): string
   return 'lich-feedback-btn';
 }
 
+function formatElapsedTime(totalMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(totalMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
 function getEdgeLabelPosition(from: SchemaNode, to: SchemaNode): { x: number; y: number } {
   return {
     x: (from.left + to.left) / 2,
@@ -119,6 +131,7 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
     attemptCount,
     history,
     canUndo,
+    huntTimer,
     notice,
     setNotice,
     clearDiscoveredSlot,
@@ -127,7 +140,12 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
     resetMachine,
     clearAll,
     undoLastFeedback,
+    startHuntTimer,
+    pauseHuntTimer,
+    resumeHuntTimer,
   } = useLichSolver();
+
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const visitedNodes = useMemo(() => {
     const visited = new Set<LichSolverStateId>();
@@ -154,10 +172,64 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
     }, {} as Record<LichSolverStateId, SchemaNode>);
   }, []);
 
+  useEffect(() => {
+    if (!huntTimer.isRunning) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [huntTimer.isRunning]);
+
+  const displayedElapsedMs = useMemo(() => {
+    if (huntTimer.isRunning && huntTimer.startedAtMs !== null) {
+      return huntTimer.elapsedMs + Math.max(0, nowMs - huntTimer.startedAtMs);
+    }
+
+    return huntTimer.elapsedMs;
+  }, [huntTimer.elapsedMs, huntTimer.isRunning, huntTimer.startedAtMs, nowMs]);
+
+  const handleTimerToggle = () => {
+    if (stateId === 'SOLVED') {
+      return;
+    }
+
+    if (huntTimer.isRunning) {
+      pauseHuntTimer();
+      return;
+    }
+
+    resumeHuntTimer();
+  };
+
   return (
     <section className="lich-page" aria-label="Kuva Lich requiem solver">
       <div className="lich-toolbar" role="toolbar" aria-label="Solver actions">
         <p className="lich-current-state">State: {stateDefinition.title} · Attempts: {attemptCount}</p>
+
+        <div className="lich-hunt-center" aria-live="polite">
+          {!huntTimer.hasStarted ? (
+            <button className="lich-header-btn lich-hunt-start-btn" type="button" onClick={startHuntTimer}>
+              Start the hunt
+            </button>
+          ) : (
+            <button
+              className={`lich-hunt-timer-toggle ${huntTimer.isRunning ? 'is-running' : 'is-paused'}`}
+              type="button"
+              onClick={handleTimerToggle}
+              disabled={stateId === 'SOLVED'}
+              aria-label={huntTimer.isRunning ? 'Pause hunt timer' : 'Resume hunt timer'}
+              title={huntTimer.isRunning ? 'Click to pause timer' : 'Click to resume timer'}
+            >
+              <span className="lich-hunt-timer-value">{formatElapsedTime(displayedElapsedMs)}</span>
+            </button>
+          )}
+        </div>
 
         <div className="lich-header-actions">
           <button className="lich-header-btn" type="button" onClick={undoLastFeedback} disabled={!canUndo}>
