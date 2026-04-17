@@ -803,6 +803,16 @@
   color: var(--wf-accent-gold);
 }
 
+.lich-header-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lich-header-btn:disabled:hover {
+  border-color: rgba(226, 192, 118, 0.35);
+  color: #f6f8ff;
+}
+
 .lich-header-btn-danger {
   border-color: rgba(255, 99, 99, 0.45);
   color: #ff8b8b;

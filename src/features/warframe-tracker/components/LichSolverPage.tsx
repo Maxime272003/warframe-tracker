@@ -118,6 +118,7 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
     configurationSlots,
     attemptCount,
     history,
+    canUndo,
     notice,
     setNotice,
     clearDiscoveredSlot,
@@ -125,6 +126,7 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
     applyFeedback,
     resetMachine,
     clearAll,
+    undoLastFeedback,
   } = useLichSolver();
 
   const visitedNodes = useMemo(() => {
@@ -158,6 +160,9 @@ export const LichSolverPage = memo(function LichSolverPage({ onBack }: LichSolve
         <p className="lich-current-state">State: {stateDefinition.title} · Attempts: {attemptCount}</p>
 
         <div className="lich-header-actions">
+          <button className="lich-header-btn" type="button" onClick={undoLastFeedback} disabled={!canUndo}>
+            Undo
+          </button>
           <button className="lich-header-btn" type="button" onClick={resetMachine}>
             Reset state machine
           </button>

@@ -525,6 +525,25 @@ export function useLichSolver() {
     setNotice(null);
   }, [setAttemptCount, setDiscoveredSlots, setHistory, setStateId]);
 
+  const undoLastFeedback = useCallback((): boolean => {
+    if (history.length === 0) {
+      setNotice('No feedback to undo.');
+      return false;
+    }
+
+    const previousHistory = history.slice(0, -1);
+    const lastEntry = history[history.length - 1];
+    const previousAttemptCount = previousHistory.length > 0
+      ? previousHistory[previousHistory.length - 1].attemptCount
+      : 0;
+
+    setHistory(previousHistory);
+    setStateId(lastEntry.fromStateId);
+    setAttemptCount(previousAttemptCount);
+    setNotice(null);
+    return true;
+  }, [history, setAttemptCount, setHistory, setNotice, setStateId]);
+
   const applyFeedback = useCallback((optionId: string): boolean => {
     const option = stateDefinition.feedbackOptions.find((entry) => entry.id === optionId);
     if (!option) {
@@ -574,6 +593,7 @@ export function useLichSolver() {
     configurationSlots,
     attemptCount,
     history,
+    canUndo: history.length > 0,
     notice,
     setNotice,
     assignDiscoveredSlot,
@@ -582,5 +602,6 @@ export function useLichSolver() {
     applyFeedback,
     resetMachine,
     clearAll,
+    undoLastFeedback,
   };
 }
