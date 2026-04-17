@@ -13,6 +13,11 @@ export const STORAGE_KEYS = {
   selectedCategory: 'wf_selected_category_v1',
   marketSlugs: 'wf_market_slugs_cache_v1',
   marketSlugsTimestamp: 'wf_market_slugs_cache_ts_v1',
+  activeView: 'wf_active_view_v1',
+  lichDiscoveredMurmurSlots: 'wf_lich_discovered_slots_v1',
+  lichSolverStateId: 'wf_lich_solver_state_v1',
+  lichSolverAttemptCount: 'wf_lich_attempt_count_v1',
+  lichSolverHistory: 'wf_lich_history_v1',
 } as const;
 
 export const MARKET_SLUG_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
@@ -30,3 +35,15 @@ export const ITEM_FILTER_OPTIONS = [
 ] as const;
 
 export const bundledMarketSlugsText = localMarketSlugsText;
+
+export const REQUIEM_MOD_IDS = [
+  'fass',
+  'khra',
+  'jahu',
+  'netra',
+  'lohk',
+  'ris',
+  'vome',
+  'xata',
+  'oull',
+] as const;

@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import type { Engine } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
-import type { ItemFilter } from './types';
+import type { ItemFilter, LichSolverView } from './types';
 import { STORAGE_KEYS, ITEM_FILTER_OPTIONS } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { WorldStatePanel } from './components/WorldStatePanel';
 import { FissuresPanel } from './components/FissuresPanel';
+import { LichSolverPage } from './components/LichSolverPage';
 import { filterItemNames, getRemainingObtainableItemCount, normalizeCategoryKey, parseImportJson } from './utils';
 import { useMarketSlugs } from './hooks/useMarketSlugs';
 import { usePersistentState } from './hooks/usePersistentState';
@@ -20,6 +21,8 @@ const parseItemFilter = (raw: string): ItemFilter => {
   return ITEM_FILTER_OPTIONS.some((option) => option.value === raw) ? (raw as ItemFilter) : 'All';
 };
 const serializeItemFilter = (value: ItemFilter): string => value;
+const parseActiveView = (raw: string): LichSolverView => (raw === 'solver' ? 'solver' : 'arsenal');
+const serializeActiveView = (value: LichSolverView): string => value;
 const parseSet = (raw: string): Set<string> => {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -40,6 +43,7 @@ export default function ArsenalTracker() {
   const [hideOwned, setHideOwned] = usePersistentState<boolean>(STORAGE_KEYS.hideOwned, false, parseBoolean, serializeBoolean);
   const [hideUnobtainable, setHideUnobtainable] = usePersistentState<boolean>(STORAGE_KEYS.hideUnobtainable, false, parseBoolean, serializeBoolean);
   const [showFiltersBar, setShowFiltersBar] = usePersistentState<boolean>(STORAGE_KEYS.showFiltersBar, true, parseBoolean, serializeBoolean);
+  const [activeView, setActiveView] = usePersistentState<LichSolverView>(STORAGE_KEYS.activeView, 'arsenal', parseActiveView, serializeActiveView);
   const [filter, setFilter] = usePersistentState<ItemFilter>(STORAGE_KEYS.filter, 'All', parseItemFilter, serializeItemFilter);
   const [ownedItems, setOwnedItems] = usePersistentState<Set<string>>(STORAGE_KEYS.ownedItems, new Set<string>(), parseSet, serializeSet);
   const [unobtainableItems, setUnobtainableItems] = usePersistentState<Set<string>>(STORAGE_KEYS.unobtainableItems, new Set<string>(), parseSet, serializeSet);
@@ -60,7 +64,7 @@ export default function ArsenalTracker() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+  }, [activeView]);
 
   useEffect(() => {
     return () => {
@@ -190,6 +194,10 @@ export default function ArsenalTracker() {
     triggerUiTransition();
     setHideUnobtainable((currentValue) => !currentValue);
   }, [setHideUnobtainable, triggerUiTransition]);
+
+  const handleToggleView = useCallback(() => {
+    setActiveView((previousView) => (previousView === 'arsenal' ? 'solver' : 'arsenal'));
+  }, [setActiveView]);
 
   // Memoize filtered items per category
   const searchLower = searchQuery.toLowerCase().trim();
@@ -374,47 +382,65 @@ export default function ArsenalTracker() {
   const shouldShowSkeletons = isLoading || isUiTransitioning;
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${activeView === 'solver' ? 'app-container-solver' : ''}`}>
       {particlesReady && (
         <Particles id="tsparticles" options={particlesOptions} />
       )}
 
-      <header className="header">
-        <h1 className="title">Warframe Arsenal</h1>
-      </header>
+      {activeView === 'arsenal' && (
+        <header className="header">
+          <h1 className="title">Warframe Arsenal</h1>
+        </header>
+      )}
 
-      <div className="pre-sticky-actions">
-        <button className="export-btn" onClick={exportRemainingJson} type="button">
-          Export Remaining
-        </button>
+      {activeView === 'arsenal' && (
+        <div className="pre-sticky-actions">
+          <button className="export-btn" onClick={exportRemainingJson} type="button">
+            Export Remaining
+          </button>
 
-        <button className="upload-btn" onClick={() => fileInputRef.current?.click()} type="button">
-          Import JSON
-        </button>
-        <input accept=".json" className="file-input" onChange={handleFileUpload} ref={fileInputRef} type="file" />
-      </div>
+          <button className="upload-btn" onClick={() => fileInputRef.current?.click()} type="button">
+            Import JSON
+          </button>
+          <input accept=".json" className="file-input" onChange={handleFileUpload} ref={fileInputRef} type="file" />
+        </div>
+      )}
 
-      <button
-        className="filters-toggle-btn sticky-controls-toggle"
-        type="button"
-        onClick={() => setShowFiltersBar((current) => !current)}
-        title={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
-        aria-label={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
-      >
-        {showFiltersBar ? (
-          <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
-          </svg>
-        )}
-      </button>
+      {activeView === 'arsenal' && (
+        <div className="floating-view-actions" role="group" aria-label="View actions">
+          <button
+            className="filters-toggle-btn sticky-controls-toggle sticky-controls-solver-toggle"
+            type="button"
+            onClick={handleToggleView}
+            title="Open Lich solver"
+            aria-label="Open Lich solver"
+          >
+            Lich Solver
+          </button>
 
-      {showFiltersBar && (
+          <button
+            className="filters-toggle-btn sticky-controls-toggle"
+            type="button"
+            onClick={() => setShowFiltersBar((current) => !current)}
+            title={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
+            aria-label={showFiltersBar ? 'Hide filter bar' : 'Show filter bar'}
+          >
+            {showFiltersBar ? (
+              <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg className="filters-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
+      {activeView === 'arsenal' && showFiltersBar && (
       <div className="controls">
         <div className="top-nav">
           <button 
@@ -467,6 +493,10 @@ export default function ArsenalTracker() {
       )}
 
       <main>
+        {activeView === 'solver' ? (
+          <LichSolverPage onBack={() => setActiveView('arsenal')} />
+        ) : (
+          <>
         {shouldRenderPriorities && (
           <CategorySection
             id="priorities"
@@ -527,9 +557,11 @@ export default function ArsenalTracker() {
             onToggleUnobtainable={toggleUnobtainable}
           />
         )}
+          </>
+        )}
       </main>
 
-      {showFiltersBar && (
+      {activeView === 'arsenal' && showFiltersBar && (
         <>
           <WorldStatePanel
             cycles={worldState.cycles}
