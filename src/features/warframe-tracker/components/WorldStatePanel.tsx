@@ -1,22 +1,17 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import type { CycleData, VoidTraderData } from '../hooks/useWorldState';
+import type { VoidTraderData } from '../hooks/useWorldState';
 import { formatTimeRemaining } from '../hooks/useWorldState';
 
 const COOLDOWN_SECONDS = 30;
 
 type WorldStatePanelProps = {
-  cycles: CycleData[];
   voidTrader: VoidTraderData | null;
   isLoading: boolean;
   onRefresh: () => boolean; // returns true if refresh was triggered
 };
 
-function getCycleStateClass(state: string): string {
-  return `cycle-state cycle-state-${state.toLowerCase()}`;
-}
 
 export const WorldStatePanel = memo(function WorldStatePanel({
-  cycles,
   voidTrader,
   isLoading,
   onRefresh,
@@ -67,23 +62,6 @@ export const WorldStatePanel = memo(function WorldStatePanel({
           </svg>
           {isCooldown && <span className="cooldown-badge">{cooldown}</span>}
         </button>
-      </div>
-
-      {/* Cycles */}
-      <div className="world-section">
-        <h4 className="world-section-title">Cycles</h4>
-        {cycles.length === 0 && (
-          <div className="world-empty">Loading cycles...</div>
-        )}
-        {cycles.map((cycle) => (
-          <div key={cycle.id} className="cycle-row">
-            <div className="cycle-info">
-              <span className="cycle-label">{cycle.label}</span>
-              <span className={getCycleStateClass(cycle.state)}>{cycle.state}</span>
-            </div>
-            <span className="cycle-timer">{formatTimeRemaining(cycle.expiry)}</span>
-          </div>
-        ))}
       </div>
 
       {/* Void Trader */}

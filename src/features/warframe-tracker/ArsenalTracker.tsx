@@ -7,7 +7,6 @@ import { STORAGE_KEYS, ITEM_FILTER_OPTIONS } from './constants';
 import { CategorySection } from './components/CategorySection';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { WorldStatePanel } from './components/WorldStatePanel';
-import { FissuresPanel } from './components/FissuresPanel';
 import { LichSolverPage } from './components/LichSolverPage';
 import { filterItemNames, getRemainingObtainableItemCount, normalizeCategoryKey, parseImportJson } from './utils';
 import { useMarketSlugs } from './hooks/useMarketSlugs';
@@ -562,20 +561,13 @@ export default function ArsenalTracker() {
       </main>
 
       {activeView === 'arsenal' && showFiltersBar && (
-        <>
-          <WorldStatePanel
-            cycles={worldState.cycles}
-            voidTrader={worldState.voidTrader}
-            isLoading={isWorldStateLoading}
-            onRefresh={refreshWorldState}
-          />
-
-          <FissuresPanel
-            fissures={worldState.fissures}
-            isLoading={isWorldStateLoading}
-          />
-        </>
+        <WorldStatePanel
+          voidTrader={worldState.voidTrader}
+          isLoading={isWorldStateLoading}
+          onRefresh={refreshWorldState}
+        />
       )}
+
 
       <ScrollToTopButton />
     </div>

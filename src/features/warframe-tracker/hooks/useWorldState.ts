@@ -2,12 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 // --- Types ---
 
-export type CycleData = {
-  id: string;
-  label: string;
-  state: string;
-  expiry: string;
-};
 
 export type VoidTraderData = {
   character: string;
@@ -17,36 +11,15 @@ export type VoidTraderData = {
   expiry: string;
 };
 
-export type FissureData = {
-  id: string;
-  node: string;
-  missionType: string;
-  enemy: string;
-  tier: string;
-  tierNum: number;
-  isHard: boolean; // Steel Path
-  isStorm: boolean; // Railjack
-  expiry: string;
-};
 
 export type WorldState = {
-  cycles: CycleData[];
   voidTrader: VoidTraderData | null;
-  fissures: FissureData[];
   lastUpdated: number;
 };
 
+
 // --- Raw API types ---
 
-type RawCycle = {
-  id?: string;
-  state?: string;
-  expiry?: string;
-  timeLeft?: string;
-  isDay?: boolean;
-  isWarm?: boolean;
-  isCorpus?: boolean;
-};
 
 type RawVoidTrader = {
   character?: string;
@@ -56,28 +29,11 @@ type RawVoidTrader = {
   inventory?: unknown[];
 };
 
-type RawFissure = {
-  id?: string;
-  node?: string;
-  missionType?: string;
-  enemy?: string;
-  tier?: string;
-  tierNum?: number;
-  isHard?: boolean;
-  isStorm?: boolean;
-  expiry?: string;
-};
 
 type RawWorldState = {
-  earthCycle?: RawCycle;
-  cetusCycle?: RawCycle;
-  vallisCycle?: RawCycle;
-  cambionCycle?: RawCycle;
-  zarimanCycle?: RawCycle;
-  duviriCycle?: RawCycle & { choices?: unknown[] };
   voidTrader?: RawVoidTrader;
-  fissures?: RawFissure[];
 };
+
 
 // --- Helpers ---
 
@@ -98,28 +54,6 @@ export function formatTimeRemaining(expiryIso: string): string {
   return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-function parseCycles(data: RawWorldState): CycleData[] {
-  const cycles: CycleData[] = [];
-
-  const push = (label: string, raw: RawCycle | undefined) => {
-    if (!raw?.expiry || !raw.state) return;
-    cycles.push({
-      id: raw.id ?? label,
-      label,
-      state: raw.state.charAt(0).toUpperCase() + raw.state.slice(1),
-      expiry: raw.expiry,
-    });
-  };
-
-  push('Earth', data.earthCycle);
-  push('Cetus', data.cetusCycle);
-  push('Orb Vallis', data.vallisCycle);
-  push('Cambion Drift', data.cambionCycle);
-  push('Zariman', data.zarimanCycle);
-  push('Duviri', data.duviriCycle);
-
-  return cycles;
-}
 
 function parseVoidTrader(raw: RawVoidTrader | undefined): VoidTraderData | null {
   if (!raw?.activation || !raw.expiry) return null;
@@ -138,35 +72,15 @@ function parseVoidTrader(raw: RawVoidTrader | undefined): VoidTraderData | null 
   };
 }
 
-function parseFissures(raw: RawFissure[] | undefined): FissureData[] {
-  if (!raw) return [];
-
-  const now = Date.now();
-  return raw
-    .filter((f) => f.id && f.node && f.tier && f.expiry && new Date(f.expiry).getTime() > now)
-    .map((f) => ({
-      id: f.id!,
-      node: f.node!,
-      missionType: f.missionType ?? 'Unknown',
-      enemy: f.enemy ?? 'Unknown',
-      tier: f.tier!,
-      tierNum: f.tierNum ?? 0,
-      isHard: f.isHard ?? false,
-      isStorm: f.isStorm ?? false,
-      expiry: f.expiry!,
-    }))
-    .sort((a, b) => a.tierNum - b.tierNum);
-}
 
 // --- Hook ---
 
 export function useWorldState() {
   const [worldState, setWorldState] = useState<WorldState>({
-    cycles: [],
     voidTrader: null,
-    fissures: [],
     lastUpdated: 0,
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const lastFetchRef = useRef(0);
 
@@ -182,11 +96,10 @@ export function useWorldState() {
       const data = (await response.json()) as RawWorldState;
 
       setWorldState({
-        cycles: parseCycles(data),
         voidTrader: parseVoidTrader(data.voidTrader),
-        fissures: parseFissures(data.fissures),
         lastUpdated: Date.now(),
       });
+
 
       lastFetchRef.current = Date.now();
     } catch {
